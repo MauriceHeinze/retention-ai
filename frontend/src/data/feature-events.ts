@@ -14,8 +14,6 @@ export type FeaturePullRequest = {
 
 export type FeatureEventDetail = {
   description: string
-  topics: string[]
-  keywords: string[]
   pullRequests: FeaturePullRequest[]
   releaseNotes: string
 }
@@ -28,8 +26,6 @@ const DETAILS: Record<string, FeatureEventDetail> = {
   sso: {
     description:
       'Companies can sign in through their existing identity provider. SAML 2.0 is available for Okta, Azure AD, and Google Workspace, so members use their work account instead of a product password. Existing sessions stay valid until they expire.',
-    topics: ['Authentication', 'Enterprise'],
-    keywords: ['SSO', 'SAML', 'Okta', 'Azure AD'],
     pullRequests: [
       {
         number: 1842,
@@ -44,8 +40,6 @@ const DETAILS: Record<string, FeatureEventDetail> = {
   'audit-log': {
     description:
       'Admins can see who changed settings, who invited people, and who exported data. Each entry stores the actor, the action, and a timestamp, with filters for the last 90 days.',
-    topics: ['Security', 'Admin'],
-    keywords: ['audit log', 'activity', 'compliance'],
     pullRequests: [
       {
         number: 1760,
@@ -60,8 +54,6 @@ const DETAILS: Record<string, FeatureEventDetail> = {
   'bulk-export': {
     description:
       'Billing data can be exported in full as CSV, including invoices, payments, and tax lines. Exports run in the background and arrive by email when they are ready.',
-    topics: ['Billing', 'Reporting'],
-    keywords: ['CSV', 'export', 'invoices'],
     pullRequests: [
       {
         number: 1712,
@@ -76,8 +68,6 @@ const DETAILS: Record<string, FeatureEventDetail> = {
   'slack-alerts': {
     description:
       'Critical events are delivered directly in Slack: failed payments, upcoming renewals, and seats that are about to lapse. Each workspace can pick a channel and the events it cares about.',
-    topics: ['Integrations', 'Notifications'],
-    keywords: ['Slack', 'alerts', 'payments'],
     pullRequests: [
       {
         number: 1644,
@@ -92,8 +82,6 @@ const DETAILS: Record<string, FeatureEventDetail> = {
   'custom-roles': {
     description:
       'Access can be granted more finely than admin and member. Custom roles combine permissions for billing, audience, and settings so finance can export without inviting people.',
-    topics: ['Permissions', 'Admin'],
-    keywords: ['roles', 'permissions', 'RBAC'],
     pullRequests: [
       {
         number: 1588,
@@ -108,8 +96,6 @@ const DETAILS: Record<string, FeatureEventDetail> = {
   webhooks: {
     description:
       'Events can be forwarded to your own systems when a customer cancels, a payment fails, or a seat changes. Each endpoint has a signing secret and a delivery log.',
-    topics: ['Integrations', 'Platform'],
-    keywords: ['webhooks', 'API', 'events'],
     pullRequests: [
       {
         number: 1510,

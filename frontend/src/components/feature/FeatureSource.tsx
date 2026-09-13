@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import type { FeatureEvent } from '@/data/feature-events'
 import { formatDate } from '@/lib/format'
@@ -11,18 +10,6 @@ export function FeatureSource({ feature }: { feature: FeatureEvent }) {
         <p className="text-sm leading-relaxed text-muted-foreground">
           {feature.description}
         </p>
-        <div className="flex flex-wrap gap-1.5">
-          {feature.topics.map((topic) => (
-            <Badge key={topic} variant="secondary">
-              {topic}
-            </Badge>
-          ))}
-          {feature.keywords.map((keyword) => (
-            <Badge key={keyword} variant="outline">
-              {keyword}
-            </Badge>
-          ))}
-        </div>
       </section>
 
       <Separator />

@@ -3,7 +3,6 @@ import { CampaignStatusBadge } from '@/components/CampaignStatusBadge'
 import { IgnoreFeatureDialog } from '@/components/feature/IgnoreFeatureDialog'
 import { Link } from '@/components/Link'
 import { FormSelect } from '@/components/settings/FormSelect'
-import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Table,
@@ -86,7 +85,6 @@ export default function FeaturesPage() {
             <TableRow className="hover:bg-transparent">
               <TableHead>Feature</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead>Topics and keywords</TableHead>
               <TableHead className="text-right">Matches</TableHead>
               <TableHead>Campaign</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -120,20 +118,6 @@ export default function FeaturesPage() {
                     >
                       {feature.description}
                     </Link>
-                  </TableCell>
-                  <TableCell className="max-w-xs align-top whitespace-normal">
-                    <div className="flex flex-wrap gap-1">
-                      {feature.topics.map((topic) => (
-                        <Badge key={topic} variant="secondary">
-                          {topic}
-                        </Badge>
-                      ))}
-                      {feature.keywords.map((keyword) => (
-                        <Badge key={keyword} variant="outline">
-                          {keyword}
-                        </Badge>
-                      ))}
-                    </div>
                   </TableCell>
                   <TableCell className="align-top text-right tabular-nums">
                     {formatNumber(matches)}
