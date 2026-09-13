@@ -1,4 +1,11 @@
-export type CampaignStatus = 'draft' | 'approved' | 'sent' | 'rejected'
+export const CAMPAIGN_STATUSES = [
+  'draft',
+  'approved',
+  'sent',
+  'rejected',
+] as const
+
+export type CampaignStatus = (typeof CAMPAIGN_STATUSES)[number]
 
 export type Feature = {
   id: string
@@ -10,8 +17,11 @@ export type Campaign = {
   id: string
   name: string
   featureId: string
+  audience: string
   status: CampaignStatus
   updatedAt: string
+  recipientCount: number
+  sentAt: string | null
   recoveredCustomers: number
   recoveredRevenue: number
 }
@@ -20,33 +30,32 @@ export const features: Feature[] = [
   {
     id: 'sso',
     title: 'SSO / SAML',
-    summary:
-      'Unternehmen können sich über den bestehenden Identity Provider anmelden.',
+    summary: 'Companies can sign in through their existing identity provider.',
   },
   {
     id: 'audit-log',
-    title: 'Audit-Log',
-    summary: 'Admins sehen nachvollziehbar, wer Einstellungen geändert hat.',
+    title: 'Audit log',
+    summary: 'Admins can see who changed settings.',
   },
   {
     id: 'bulk-export',
-    title: 'Bulk-Export',
-    summary: 'Abrechnungsdaten lassen sich vollständig als CSV exportieren.',
+    title: 'Bulk export',
+    summary: 'Billing data can be exported in full as CSV.',
   },
   {
     id: 'slack-alerts',
-    title: 'Slack-Benachrichtigungen',
-    summary: 'Kritische Ereignisse werden direkt in Slack zugestellt.',
+    title: 'Slack alerts',
+    summary: 'Critical events are delivered directly in Slack.',
   },
   {
     id: 'custom-roles',
-    title: 'Benutzerdefinierte Rollen',
-    summary: 'Zugriffsrechte können feiner als nur Admin und Mitglied vergeben werden.',
+    title: 'Custom roles',
+    summary: 'Access can be granted more finely than admin and member.',
   },
   {
     id: 'webhooks',
     title: 'Webhooks',
-    summary: 'Events können an eigene Systeme weitergeleitet werden.',
+    summary: 'Events can be forwarded to your own systems.',
   },
 ]
 
@@ -55,55 +64,73 @@ export const featuresById = new Map(features.map((feature) => [feature.id, featu
 export const campaigns: Campaign[] = [
   {
     id: 'cmp-sso',
-    name: 'SSO ist jetzt verfügbar',
+    name: 'SSO is now available',
     featureId: 'sso',
+    audience: 'Churned customers',
     status: 'draft',
     updatedAt: '2026-09-12',
+    recipientCount: 42,
+    sentAt: null,
     recoveredCustomers: 0,
     recoveredRevenue: 0,
   },
   {
     id: 'cmp-audit',
-    name: 'Audit-Log für Admins',
+    name: 'Audit log for admins',
     featureId: 'audit-log',
+    audience: 'Churned customers',
     status: 'draft',
     updatedAt: '2026-09-11',
+    recipientCount: 31,
+    sentAt: null,
     recoveredCustomers: 0,
     recoveredRevenue: 0,
   },
   {
     id: 'cmp-export',
-    name: 'Bulk-Export der Abrechnungen',
+    name: 'Bulk export for billing',
     featureId: 'bulk-export',
+    audience: 'Trial expired',
     status: 'approved',
     updatedAt: '2026-09-10',
+    recipientCount: 58,
+    sentAt: null,
     recoveredCustomers: 0,
     recoveredRevenue: 0,
   },
   {
     id: 'cmp-slack',
-    name: 'Slack-Alerts sind live',
+    name: 'Slack alerts are live',
     featureId: 'slack-alerts',
+    audience: 'Churned customers',
     status: 'sent',
     updatedAt: '2026-09-02',
+    recipientCount: 214,
+    sentAt: '2026-09-02',
     recoveredCustomers: 18,
     recoveredRevenue: 6120,
   },
   {
     id: 'cmp-roles',
-    name: 'Eigene Rollen und Rechte',
+    name: 'Custom roles and permissions',
     featureId: 'custom-roles',
+    audience: 'Churned customers',
     status: 'sent',
     updatedAt: '2026-08-21',
+    recipientCount: 186,
+    sentAt: '2026-08-21',
     recoveredCustomers: 29,
     recoveredRevenue: 6720,
   },
   {
     id: 'cmp-webhooks',
-    name: 'Webhooks für Integrationen',
+    name: 'Webhooks for integrations',
     featureId: 'webhooks',
+    audience: 'Churned customers',
     status: 'rejected',
     updatedAt: '2026-08-14',
+    recipientCount: 47,
+    sentAt: null,
     recoveredCustomers: 0,
     recoveredRevenue: 0,
   },

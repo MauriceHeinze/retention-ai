@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { LayoutDashboard, Layers, LogOut, Mail } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Mail, Settings } from 'lucide-react'
 import { Link } from '@/components/Link'
 import {
   Sidebar,
@@ -18,12 +18,14 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { logout } from '@/lib/auth'
-import { navigate } from '@/lib/navigate'
+import { isCampaignsPath, isSettingsPath, navigate } from '@/lib/navigate'
+import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/kampagnen', label: 'Kampagnen', icon: Mail },
+  { href: '/campaigns', label: 'Campaigns', icon: Mail },
   { href: '/features', label: 'Features', icon: Layers },
+  { href: '/settings/integrations', label: 'Settings', icon: Settings },
 ] as const
 
 type AppShellProps = {
@@ -36,11 +38,18 @@ export function AppShell({ pathname, email, children }: AppShellProps) {
   return (
     <SidebarProvider>
       <AppSidebar pathname={pathname} email={email} />
-      <SidebarInset>
-        <header className="flex h-12 items-center gap-2 border-b px-4">
-          <SidebarTrigger aria-label="Navigation ein- oder ausblenden" />
+      <SidebarInset className="min-h-0">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger aria-label="Show or hide navigation" />
         </header>
-        <div className="flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</div>
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            isSettingsPath(pathname) ? '' : 'px-4 py-8 sm:px-6 lg:px-8'
+          )}
+        >
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )
@@ -84,7 +93,11 @@ function AppSidebar({ pathname, email }: { pathname: string; email: string }) {
                 const isActive =
                   item.href === '/'
                     ? pathname === '/'
-                    : pathname === item.href || pathname.startsWith(`${item.href}/`)
+                    : item.href.startsWith('/settings')
+                      ? isSettingsPath(pathname)
+                      : item.href === '/campaigns'
+                        ? isCampaignsPath(pathname)
+                        : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
                 return (
                   <SidebarMenuItem key={item.href}>
@@ -117,9 +130,9 @@ function AppSidebar({ pathname, email }: { pathname: string; email: string }) {
             </p>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Abmelden" onClick={handleLogout}>
+            <SidebarMenuButton tooltip="Sign out" onClick={handleLogout}>
               <LogOut />
-              <span>Abmelden</span>
+              <span>Sign out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -15,7 +15,7 @@ export default function FeaturesPage() {
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">Features</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Features aus gemergten PRs. Die Event-Übersicht folgt als nächster Schritt.
+          Features from merged pull requests.
         </p>
       </div>
 
@@ -24,7 +24,7 @@ export default function FeaturesPage() {
           <TableRow className="hover:bg-transparent">
             <TableHead>Feature</TableHead>
             <TableHead>Beschreibung</TableHead>
-            <TableHead className="text-right">Kampagnen</TableHead>
+            <TableHead className="text-right">Campaigns</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

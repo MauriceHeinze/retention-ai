@@ -1,19 +1,36 @@
 import { useSyncExternalStore } from 'react'
 import { AppShell } from '@/components/AppShell'
+import { SettingsLayout } from '@/components/settings/SettingsLayout'
 import { getSession, subscribeToSession } from '@/lib/auth'
-import { getPathname, subscribeToPath } from '@/lib/navigate'
+import {
+  campaignIdFromPath,
+  getPathname,
+  isCampaignsPath,
+  isSettingsPath,
+  subscribeToPath,
+} from '@/lib/navigate'
+import CampaignReviewPage from '@/pages/CampaignReviewPage'
 import CampaignsPage from '@/pages/CampaignsPage'
 import DashboardPage from '@/pages/DashboardPage'
 import FeatureDetailPage from '@/pages/FeatureDetailPage'
 import FeaturesPage from '@/pages/FeaturesPage'
 import LoginPage from '@/pages/LoginPage'
+import GitHubSettingsPage from '@/pages/settings/GitHubSettingsPage'
+import IntegrationsOverviewPage from '@/pages/settings/IntegrationsOverviewPage'
+import LanguageAndVoicePage from '@/pages/settings/LanguageAndVoicePage'
+import MailchimpSettingsPage from '@/pages/settings/MailchimpSettingsPage'
+import MatchingPage from '@/pages/settings/MatchingPage'
+import SlackSettingsPage from '@/pages/settings/SlackSettingsPage'
+import StripeSettingsPage from '@/pages/settings/StripeSettingsPage'
+import TemplatePage from '@/pages/settings/TemplatePage'
 
 function App() {
   const pathname = useSyncExternalStore(subscribeToPath, getPathname, () => '/')
   const session = useSyncExternalStore(subscribeToSession, getSession, () => null)
 
   if (!session) {
-    return <LoginPage />
+    const redirectTo = pathname === '/login' ? '/' : pathname
+    return <LoginPage redirectTo={redirectTo} />
   }
 
   return (
@@ -28,7 +45,9 @@ function AppRoute({ pathname }: { pathname: string }) {
     return <DashboardPage />
   }
 
-  if (pathname === '/kampagnen') {
+  if (isCampaignsPath(pathname)) {
+    const campaignId = campaignIdFromPath(pathname)
+    if (campaignId) return <CampaignReviewPage campaignId={campaignId} />
     return <CampaignsPage />
   }
 
@@ -41,12 +60,63 @@ function AppRoute({ pathname }: { pathname: string }) {
     return <FeatureDetailPage featureId={featureId} />
   }
 
+  if (isSettingsPath(pathname)) {
+    return (
+      <SettingsLayout pathname={pathname}>
+        <SettingsRoute pathname={pathname} />
+      </SettingsLayout>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <h1 className="font-heading text-2xl font-medium tracking-tight">
-        Seite nicht gefunden
+        Page not found
       </h1>
-      <p className="text-sm text-muted-foreground">Diese Route gibt es nicht.</p>
+      <p className="text-sm text-muted-foreground">This route does not exist.</p>
+    </div>
+  )
+}
+
+function SettingsRoute({ pathname }: { pathname: string }) {
+  if (pathname === '/settings' || pathname === '/settings/integrations') {
+    return <IntegrationsOverviewPage />
+  }
+
+  if (pathname === '/settings/integrations/stripe') {
+    return <StripeSettingsPage />
+  }
+
+  if (pathname === '/settings/integrations/github') {
+    return <GitHubSettingsPage />
+  }
+
+  if (pathname === '/settings/integrations/mailchimp') {
+    return <MailchimpSettingsPage />
+  }
+
+  if (pathname === '/settings/integrations/slack') {
+    return <SlackSettingsPage />
+  }
+
+  if (pathname === '/settings/matching') {
+    return <MatchingPage />
+  }
+
+  if (pathname === '/settings/language-and-voice') {
+    return <LanguageAndVoicePage />
+  }
+
+  if (pathname === '/settings/template') {
+    return <TemplatePage />
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h1 className="font-heading text-2xl font-medium tracking-tight">
+        Settings page not found
+      </h1>
+      <p className="text-sm text-muted-foreground">This settings route does not exist.</p>
     </div>
   )
 }

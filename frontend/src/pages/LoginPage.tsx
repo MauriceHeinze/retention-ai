@@ -21,19 +21,19 @@ function validate(email: string, password: string): FieldErrors {
   const errors: FieldErrors = {}
 
   if (!email.trim()) {
-    errors.email = 'Bitte E-Mail eingeben.'
+    errors.email = 'Enter an email address.'
   } else if (!email.includes('@')) {
-    errors.email = 'Bitte eine gültige E-Mail eingeben.'
+    errors.email = 'Enter a valid email address.'
   }
 
   if (!password) {
-    errors.password = 'Bitte Passwort eingeben.'
+    errors.password = 'Enter a password.'
   }
 
   return errors
 }
 
-export default function LoginPage() {
+export default function LoginPage({ redirectTo = '/' }: { redirectTo?: string }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
@@ -46,7 +46,7 @@ export default function LoginPage() {
     if (Object.keys(nextErrors).length > 0) return
 
     login(email.trim())
-    navigate('/')
+    navigate(redirectTo || '/')
   }
 
   return (
@@ -58,22 +58,22 @@ export default function LoginPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Anmelden</CardTitle>
+            <CardTitle className="text-2xl">Sign in</CardTitle>
             <CardDescription>
-              Melde dich mit deiner E-Mail und deinem Passwort an.
+              Sign in with your work email and password.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} noValidate>
               <FieldGroup className="gap-5">
                 <Field data-invalid={errors.email ? true : undefined}>
-                  <FieldLabel htmlFor="email">E-Mail</FieldLabel>
+                  <FieldLabel htmlFor="email">Email</FieldLabel>
                   <Input
                     id="email"
                     name="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="du@firma.de"
+                    placeholder="you@company.com"
                     value={email}
                     aria-invalid={Boolean(errors.email)}
                     onChange={(event) => setEmail(event.target.value)}
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 </Field>
 
                 <Field data-invalid={errors.password ? true : undefined}>
-                  <FieldLabel htmlFor="password">Passwort</FieldLabel>
+                  <FieldLabel htmlFor="password">Password</FieldLabel>
                   <Input
                     id="password"
                     name="password"
@@ -96,7 +96,7 @@ export default function LoginPage() {
                 </Field>
 
                 <Button type="submit" className="w-full" size="lg">
-                  Anmelden
+                  Sign in
                 </Button>
               </FieldGroup>
             </form>
