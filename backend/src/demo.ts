@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { customers, release } from "./fixtures.js";
 import type { runAgent } from "./agent.js";
+import type { EmailDelivery } from "./email.js";
 
 type AgentResult = Pick<Awaited<ReturnType<typeof runAgent>>, "assessment" | "steps" | "tools" | "excludedCustomers">;
 export type DemoRun = {
@@ -13,6 +14,7 @@ export type DemoRun = {
   customers: typeof customers;
   result?: AgentResult;
   error?: string;
+  deliveries?: Record<string, EmailDelivery>;
 };
 
 export function createDemoRunner(assess: () => Promise<AgentResult>, options: {

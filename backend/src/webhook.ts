@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { GitHubError, getDeploymentJob, type DeploymentJob } from "./github.js";
 import { z, ZodError } from "zod";
 import type { DemoRunner } from "./demo.js";
+import { EmailError, type DemoEmailer } from "./email.js";
 
 export function verifySignature(body: Buffer, signature: string | undefined, secret: string): boolean {
   if (!signature) return false;
@@ -16,6 +17,7 @@ export function createWebhookServer(options: {
   repository?: string;
   enqueue?: (job: DeploymentJob) => Promise<{ id: string; duplicate: boolean }>;
   demo?: DemoRunner;
+  sendDemoEmail?: DemoEmailer;
   allowedOrigins?: string[];
   requestsPerMinute?: number;
 }) {
@@ -26,6 +28,21 @@ export function createWebhookServer(options: {
   function respond(response: ServerResponse, status: number, body: object) {
     response.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
     response.end(JSON.stringify(body));
+  }
+  async function readDemoJson(request: IncomingMessage): Promise<unknown> {
+    if (request.headers["content-type"]?.split(";")[0]?.trim() !== "application/json") {
+      request.resume(); throw new EmailError(415, "Use application/json");
+    }
+    const chunks: Buffer[] = [];
+    let size = 0;
+    for await (const chunk of request) {
+      const bytes = Buffer.from(chunk);
+      size += bytes.length;
+      if (size > 1024) throw new EmailError(413, "Demo request is too large");
+      chunks.push(bytes);
+    }
+    try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
+    catch { throw new EmailError(400, "Use a valid JSON object"); }
   }
   async function handle(request: IncomingMessage, response: ServerResponse) {
     if (Date.now() - windowStart >= 60_000) { windowStart = Date.now(); requests = 0; }
@@ -51,19 +68,22 @@ export function createWebhookServer(options: {
       if (!options.demo) { respond(response, 503, { error: "The demo is not configured yet" }); request.resume(); return; }
       if (request.url === "/api/demo/runs") {
         if (request.method !== "POST") { response.setHeader("Allow", "POST"); respond(response, 405, { error: "Use POST" }); request.resume(); return; }
-        if (request.headers["content-type"]?.split(";")[0]?.trim() !== "application/json") {
-          respond(response, 415, { error: "Use application/json" }); request.resume(); return;
-        }
-        let body = "";
-        for await (const chunk of request) {
-          body += Buffer.from(chunk).toString("utf8");
-          if (Buffer.byteLength(body) > 1024) { respond(response, 413, { error: "Use an empty JSON object" }); return; }
-        }
-        try { z.object({}).strict().parse(JSON.parse(body)); }
+        const body = await readDemoJson(request);
+        try { z.object({}).strict().parse(body); }
         catch { respond(response, 400, { error: "Use an empty JSON object. The demo uses fixed sample data." }); return; }
         const started = options.demo.start();
         if (!started) { response.setHeader("Retry-After", "3600"); respond(response, 429, { error: "Demo capacity reached. Try again later." }); return; }
         respond(response, started.run.status === "running" ? 202 : 200, { ...started.run, reused: started.reused }); return;
+      }
+      const segments = request.url.split("/");
+      if (segments.length === 6 && segments[3] === "runs" && segments[5] === "send") {
+        if (request.method !== "POST") { response.setHeader("Allow", "POST"); respond(response, 405, { error: "Use POST" }); request.resume(); return; }
+        if (!options.sendDemoEmail) { respond(response, 503, { error: "Demo email is not configured yet" }); request.resume(); return; }
+        const body = await readDemoJson(request);
+        const approval = z.object({ customerId: z.string().min(1).max(100), approved: z.literal(true) }).strict().safeParse(body);
+        if (!approval.success) { respond(response, 400, { error: "Provide customerId and approved: true. Recipient and draft content cannot be changed." }); return; }
+        const delivery = await options.sendDemoEmail(segments[4]!, approval.data.customerId);
+        respond(response, 200, delivery); return;
       }
       const id = request.url.slice("/api/demo/runs/".length);
       if (request.url.startsWith("/api/demo/runs/") && request.method === "GET") {
@@ -103,6 +123,10 @@ export function createWebhookServer(options: {
   return createServer({ requestTimeout: 10_000, headersTimeout: 10_000, maxHeaderSize: 16_384 }, (request, response) => {
     void handle(request, response).catch(error => {
       if (response.headersSent || response.destroyed) return;
+      if (error instanceof EmailError) {
+        if (error.status === 429) response.setHeader("Retry-After", "3600");
+        respond(response, error.status, { error: error.message }); return;
+      }
       const invalid = error instanceof SyntaxError || error instanceof ZodError;
       const forbidden = error instanceof GitHubError && error.code === "repository_not_allowed";
       respond(response, invalid ? 400 : forbidden ? 403 : 503, {

@@ -8,10 +8,13 @@ import { createWebhookServer } from "./webhook.js";
 import { canContact } from "./policy.js";
 import { createDemoRunner } from "./demo.js";
 import { customers as sampleCustomers, release as sampleRelease } from "./fixtures.js";
+import { createDemoEmailer, createResendSender } from "./email.js";
 
 const configSchema = z.object({
   OPENROUTER_API_KEY: z.string().trim().optional(),
   OPENROUTER_MODEL: z.string().trim().min(1).default("google/gemini-3.8-flash"),
+  RESEND_API_KEY: z.string().trim().optional(),
+  DEMO_RECIPIENT_EMAIL: z.string().trim().optional(),
   STRIPE_SECRET_KEY: z.string().trim().optional(),
   GITHUB_REPOSITORY: z.literal("ilindaniel/retention-ai-testing").default("ilindaniel/retention-ai-testing"),
   GITHUB_TOKEN: z.string().trim().optional(),
@@ -35,6 +38,9 @@ if (!config.success) {
       if (!["http:", "https:"].includes(url.protocol) || url.origin !== origin) throw new Error("Invalid dashboard origin");
     }
     const demo = apiKey ? createDemoRunner(() => runAgent(apiKey, settings.OPENROUTER_MODEL, sampleRelease, sampleCustomers)) : undefined;
+    const sendDemoEmail = demo && settings.RESEND_API_KEY && settings.DEMO_RECIPIENT_EMAIL
+      ? createDemoEmailer(demo, createResendSender(settings.RESEND_API_KEY, settings.DEMO_RECIPIENT_EMAIL))
+      : undefined;
     let integration = {};
     if (settings.GITHUB_WEBHOOK_SECRET) {
       if (!apiKey || !settings.STRIPE_SECRET_KEY) throw new Error("GitHub integration requires provider keys");
@@ -58,10 +64,10 @@ if (!config.success) {
       });
       integration = { secret: settings.GITHUB_WEBHOOK_SECRET, repository: settings.GITHUB_REPOSITORY, enqueue: queue.enqueue };
     }
-    const server = createWebhookServer({ ...integration, ...(demo ? { demo } : {}), allowedOrigins });
+    const server = createWebhookServer({ ...integration, ...(demo ? { demo } : {}), ...(sendDemoEmail ? { sendDemoEmail } : {}), allowedOrigins });
     server.on("error", () => { console.error("Unable to start the webhook server. Check the host and port."); process.exitCode = 1; });
     server.listen(settings.PORT, settings.HOST, () => {
-      console.log(JSON.stringify({ event: "server_ready", port: settings.PORT, demoConfigured: Boolean(demo), githubConfigured: Boolean(settings.GITHUB_WEBHOOK_SECRET) }));
+      console.log(JSON.stringify({ event: "server_ready", port: settings.PORT, demoConfigured: Boolean(demo), emailConfigured: Boolean(sendDemoEmail), githubConfigured: Boolean(settings.GITHUB_WEBHOOK_SECRET) }));
     });
   } catch {
     console.error("Server setup failed. Check provider settings, allowed origins, and job-storage permissions.");
