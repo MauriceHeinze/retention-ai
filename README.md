@@ -6,7 +6,7 @@ Customers cancel because a feature is missing. When it finally ships, RetentionA
 
 **Distinctive approach:** RetentionAI connects release evidence to each customer's specific cancellation reason, including cases where a related feature does not solve their need.
 
-**[Try the demo](https://frontend-production-7c37.up.railway.app)** | **Video: TODO - add before submission**
+**[Try the demo](https://frontend-production-7c37.up.railway.app)** | **[Watch the demo video](https://www.dropbox.com/scl/fo/jgcqrm2kspsdvlcuoohs6/ABe4eFmCPvv0VRyGm4i7UfA?rlkey=n8f3peoqplwmwsjyp0qyowl6y&st=t01ega6o&dl=0)**
 
 ## Try it in 60 seconds
 
