@@ -63,6 +63,11 @@ Missing or ambiguous feedback requires needs_review. If another stated blocker r
 Quote exact contiguous excerpts from the source in customerEvidence and releaseEvidence.
 Use null customerEvidence when feedback is absent.
 For matches only, draft a brief personal email addressing the need using only supported release facts.
+Write like a friendly product team member sharing good news with a former customer: warm, upbeat, and conversational.
+Use a short, inviting subject, a natural greeting, and two or three short paragraphs (roughly 50-90 words).
+Connect the update to what this customer wanted and explain the practical benefit. Use contractions and at most one exclamation mark.
+Close with a gentle invitation to give the product another try, such as "We'd love to have you back." Avoid pressure or guilt.
+Avoid stiff phrases like "You previously shared", generic hype, emojis, and claims that the feature was built specifically for this customer.
 Do not invent names, links, discounts, or promises. Do not claim all customer problems are solved.
 For all other decisions, draft must be null. These are drafts for human review; nothing is sent.`,
     prompt: JSON.stringify(evidence.steps.flatMap(step => step.toolResults.map(result => ({ source: result.toolName, data: result.output })))),
