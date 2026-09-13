@@ -27,6 +27,13 @@ test("accept evidence copied from the supplied sources", () => {
   assert.deepEqual(validateAssessment(valid, [customer], release.evidence), valid);
 });
 
+test("normalize escaped paragraph breaks in email drafts before display or sending", () => {
+  const assessment = structuredClone(valid);
+  assessment.decisions[0]!.draft!.body = "Hi there,\\n\\nCSV downloads are here.\\r\\nWelcome back!";
+  const normalized = validateAssessment(assessment, [customer], release.evidence);
+  assert.equal(normalized.decisions[0]!.draft!.body, "Hi there,\n\nCSV downloads are here.\nWelcome back!");
+});
+
 test("reject invented evidence, unknown customers, and drafts for non-matches", () => {
   for (const changes of [
     { customerEvidence: "I wanted automatic export" },

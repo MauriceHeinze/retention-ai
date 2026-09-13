@@ -10,7 +10,7 @@ export const assessmentSchema = z.object({
     releaseEvidence: z.string().min(1),
     draft: z.object({
       subject: z.string().min(1).max(150),
-      body: z.string().min(1).max(2000),
+      body: z.string().min(1).max(2000).transform(value => value.replaceAll("\\r\\n", "\n").replaceAll("\\n", "\n")),
     }).nullable(),
   })),
 });
