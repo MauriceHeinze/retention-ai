@@ -6,10 +6,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm -r --parallel --filter @retention-ai/web --filter @retention-ai/api dev",
-    "dev:web": "pnpm --filter @retention-ai/web dev",
-    "dev:api": "pnpm --filter @retention-ai/api dev",
+    "dev": "pnpm --filter @retention-ai/frontend dev",
     "build": "pnpm -r build",
-    "lint": "pnpm --filter @retention-ai/web lint"
+    "lint": "pnpm --filter @retention-ai/frontend lint"
   }
 }
