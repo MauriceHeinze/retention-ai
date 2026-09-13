@@ -1,0 +1,15 @@
+{
+  "name": "retention-ai",
+  "private": true,
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @retention-ai/web --filter @retention-ai/api dev",
+    "dev:web": "pnpm --filter @retention-ai/web dev",
+    "dev:api": "pnpm --filter @retention-ai/api dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm --filter @retention-ai/web lint"
+  }
+}
