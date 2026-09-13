@@ -58,12 +58,15 @@ export default function LoginPage({ redirectTo = '/' }: { redirectTo?: string })
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Sign in</CardTitle>
+            <CardTitle className="text-2xl">Explore RetentionAI</CardTitle>
             <CardDescription>
-              Sign in with your work email and password.
+              Review a shipped feature, find former customers who need it, and approve a personal email. No account required for the demo.
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <Button className="mb-6 w-full" size="lg" onClick={() => { login('Demo reviewer'); navigate(redirectTo || '/') }}>Open demo</Button>
+            <details>
+            <summary className="mb-4 cursor-pointer text-sm text-muted-foreground">Preview sign-in form (demo only; do not enter a real password)</summary>
             <form onSubmit={handleSubmit} noValidate>
               <FieldGroup className="gap-5">
                 <Field data-invalid={errors.email ? true : undefined}>
@@ -100,6 +103,7 @@ export default function LoginPage({ redirectTo = '/' }: { redirectTo?: string })
                 </Button>
               </FieldGroup>
             </form>
+            </details>
           </CardContent>
         </Card>
       </div>

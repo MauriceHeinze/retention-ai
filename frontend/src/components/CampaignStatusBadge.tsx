@@ -4,6 +4,7 @@ import type { CampaignStatus } from '@/data/mock'
 const STATUS_LABEL = {
   draft: 'Draft',
   approved: 'Approved',
+  accepted: 'Accepted by Resend',
   sent: 'Sent',
   rejected: 'Rejected',
 } as const satisfies Record<CampaignStatus, string>
@@ -11,6 +12,7 @@ const STATUS_LABEL = {
 const STATUS_VARIANT = {
   draft: 'outline',
   approved: 'secondary',
+  accepted: 'secondary',
   sent: 'default',
   rejected: 'destructive',
 } as const satisfies Record<

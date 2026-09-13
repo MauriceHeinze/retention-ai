@@ -12,13 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { foundMatchCount, getFeatureEvent } from '@/data/feature-events'
-import { features } from '@/data/mock'
-import {
-  getCampaignContent,
-  isEditableStatus,
-  useCampaigns,
-} from '@/lib/campaign-store'
+import { isEditableStatus } from '@/lib/campaign-store'
+import { useLiveData } from '@/lib/live-data'
+import { LiveToolbar } from '@/components/live/LiveToolbar'
 import {
   ignoreFeature,
   restoreFeature,
@@ -26,7 +22,6 @@ import {
 } from '@/lib/feature-store'
 import { featureHref } from '@/lib/navigate'
 import { formatNumber } from '@/lib/format'
-import { getSavedSettings } from '@/lib/settings-store'
 import { toast } from 'sonner'
 
 const VISIBILITY_OPTIONS = [
@@ -38,12 +33,12 @@ const VISIBILITY_OPTIONS = [
 type Visibility = (typeof VISIBILITY_OPTIONS)[number]['value']
 
 export default function FeaturesPage() {
-  const campaigns = useCampaigns()
+  const { campaigns, features, isLoading, error, refresh } = useLiveData()
+  const getFeatureEvent = (id: string) => features.find(feature => feature.id === id)
   const ignoredIds = useIgnoredFeatureIds()
   const ignored = useMemo(() => new Set(ignoredIds), [ignoredIds])
   const [visibility, setVisibility] = useState<Visibility>('active')
   const [pendingId, setPendingId] = useState<string | null>(null)
-  const globalThreshold = getSavedSettings().matching.minMatchStrength
 
   const rows = features.filter((feature) => {
     const isIgnored = ignored.has(feature.id)
@@ -73,6 +68,8 @@ export default function FeaturesPage() {
         />
       </div>
 
+      <LiveToolbar isLoading={isLoading} error={error} onRefresh={refresh} />
+
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {visibility === 'ignored'
@@ -97,8 +94,7 @@ export default function FeaturesPage() {
               const campaign = campaigns.find(
                 (entry) => entry.featureId === feature.id
               )
-              const content = campaign ? getCampaignContent(campaign.id) : null
-              const matches = foundMatchCount(campaign, content, globalThreshold)
+              const matches = campaign?.recipientCount ?? 0
               const isIgnored = ignored.has(feature.id)
 
               return (
@@ -125,7 +121,7 @@ export default function FeaturesPage() {
                   <TableCell className="align-top">
                     {campaign ? (
                       <CampaignStatusBadge
-                        status={campaign.status === 'sent' ? 'sent' : 'draft'}
+                        status={campaign.status}
                       />
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -141,7 +137,7 @@ export default function FeaturesPage() {
                             size: 'xs',
                           })}
                         >
-                          Edit draft
+                          Review draft
                         </Link>
                       ) : campaign ? (
                         <Link

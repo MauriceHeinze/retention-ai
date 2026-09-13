@@ -67,7 +67,7 @@ export function isFeaturesPath(pathname: string) {
 }
 
 export function featureHref(id: string, tab: FeatureTab = 'feature') {
-  const encoded = encodeURIComponent(id)
+  const encoded = id.startsWith('live/') ? `live/${encodeURIComponent(id.slice(5))}` : encodeURIComponent(id)
   return tab === 'feature' ? `/features/${encoded}` : `/features/${encoded}/${tab}`
 }
 

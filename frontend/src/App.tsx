@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { AppShell } from '@/components/AppShell'
+import { LiveReview } from '@/components/live/LiveReview'
+import { LiveFeatureDetail } from '@/components/live/LiveFeatureDetail'
 import { SettingsLayout } from '@/components/settings/SettingsLayout'
 import { getSession, subscribeToSession } from '@/lib/auth'
 import {
@@ -44,6 +46,14 @@ function App() {
 function AppRoute({ pathname }: { pathname: string }) {
   if (pathname === '/' || pathname === '/login' || pathname === '/dashboard') {
     return <DashboardPage />
+  }
+
+  if (pathname.startsWith('/campaigns/live/')) {
+    return <LiveReview key={pathname} runId={pathname.slice('/campaigns/live/'.length)} />
+  }
+  if (pathname.startsWith('/features/live/')) {
+    const [runId, tab = 'feature'] = pathname.slice('/features/live/'.length).split('/')
+    return <LiveFeatureDetail key={runId} runId={runId || ''} tab={tab} />
   }
 
   if (isCampaignsPath(pathname)) {

@@ -18,34 +18,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { featuresById } from '@/data/mock'
-import { useCampaigns } from '@/lib/campaign-store'
-import { formatCurrency, formatDate, formatNumber } from '@/lib/format'
+import { useLiveData } from '@/lib/live-data'
+import { LiveToolbar } from '@/components/live/LiveToolbar'
+import { formatDate, formatNumber } from '@/lib/format'
 
 export default function DashboardPage() {
-  const campaigns = useCampaigns()
+  const { campaigns, featuresById, runs, isLoading, error, refresh } = useLiveData()
   const recentCampaigns = [...campaigns]
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 3)
-  const kpis = campaigns.reduce(
-    (totals, campaign) => {
-      if (campaign.status !== 'sent') return totals
-      return {
-        recoveredCustomers: totals.recoveredCustomers + campaign.recoveredCustomers,
-        recoveredRevenue: totals.recoveredRevenue + campaign.recoveredRevenue,
-      }
-    },
-    { recoveredCustomers: 0, recoveredRevenue: 0 }
-  )
 
   return (
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Latest campaigns, including drafts, and customers recovered so far.
+          Latest campaign drafts and customer matches from shipped features.
         </p>
       </div>
+
+      <LiveToolbar isLoading={isLoading} error={error} onRefresh={refresh} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-10">
         <Card className="xl:col-span-7">
@@ -125,20 +117,20 @@ export default function DashboardPage() {
         <Card className="xl:col-span-3">
           <CardHeader className="border-b">
             <CardTitle>KPIs</CardTitle>
-            <CardDescription>Recovered customers and revenue.</CardDescription>
+            <CardDescription>Customer matches and outreach eligibility.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
             <div>
-              <p className="text-sm text-muted-foreground">Customers recovered</p>
+              <p className="text-sm text-muted-foreground">Matched customers</p>
               <p className="mt-1 font-heading text-3xl font-medium tabular-nums tracking-tight">
-                {formatNumber(kpis.recoveredCustomers)}
+                {formatNumber(campaigns.reduce((total, campaign) => total + campaign.recipientCount, 0))}
               </p>
             </div>
             <Separator />
             <div>
-              <p className="text-sm text-muted-foreground">Revenue recovered</p>
+              <p className="text-sm text-muted-foreground">Excluded from outreach</p>
               <p className="mt-1 font-heading text-3xl font-medium tabular-nums tracking-tight">
-                {formatCurrency(kpis.recoveredRevenue)}
+                {formatNumber(runs.reduce((total, run) => total + (run.result?.excludedCustomers || 0), 0))}
               </p>
             </div>
           </CardContent>

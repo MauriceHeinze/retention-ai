@@ -8,8 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { featuresById } from '@/data/mock'
-import { useCampaigns } from '@/lib/campaign-store'
+import { useLiveData } from '@/lib/live-data'
+import { LiveToolbar } from '@/components/live/LiveToolbar'
 import { formatCurrency, formatDate, formatNumber } from '@/lib/format'
 
 function Dash() {
@@ -17,7 +17,7 @@ function Dash() {
 }
 
 export default function CampaignsPage() {
-  const campaigns = useCampaigns()
+  const { campaigns, featuresById, isLoading, error, refresh } = useLiveData()
   const sortedCampaigns = [...campaigns].sort((a, b) => {
     const aDate = a.sentAt ?? a.updatedAt
     const bDate = b.sentAt ?? b.updatedAt
@@ -29,9 +29,11 @@ export default function CampaignsPage() {
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">Campaigns</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          All campaigns, including drafts and rejected reviews.
+          Personal email drafts from real release analysis. Open a campaign to review and approve outreach.
         </p>
       </div>
+
+      <LiveToolbar isLoading={isLoading} error={error} onRefresh={refresh} />
 
       {sortedCampaigns.length === 0 ? (
         <p className="text-sm text-muted-foreground">No campaigns yet.</p>

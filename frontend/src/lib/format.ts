@@ -13,7 +13,8 @@ const currencyFormatter = new Intl.NumberFormat('en-GB', {
 const numberFormatter = new Intl.NumberFormat('en-GB')
 
 export function formatDate(isoDate: string) {
-  return dateFormatter.format(new Date(`${isoDate}T00:00:00`))
+  const date = new Date(isoDate.length === 10 ? `${isoDate}T00:00:00` : isoDate)
+  return Number.isNaN(date.getTime()) ? 'Date unavailable' : dateFormatter.format(date)
 }
 
 export function formatCurrency(amount: number) {

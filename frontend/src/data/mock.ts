@@ -1,6 +1,7 @@
 export const CAMPAIGN_STATUSES = [
   'draft',
   'approved',
+  'accepted',
   'sent',
   'rejected',
 ] as const
