@@ -15,7 +15,6 @@ export default function MailchimpSettingsPage() {
         id="mailchimp"
         status={mailchimp.status}
         account={mailchimp.account}
-        lastSync={mailchimp.lastSync}
         errorMessage={mailchimp.errorMessage}
       />
 

@@ -10,7 +10,11 @@ const LABEL: Record<Status, string> = {
 
 export function IntegrationStatusBadge({ status }: { status: Status }) {
   if (status === 'connected') {
-    return <Badge>{LABEL[status]}</Badge>
+    return (
+      <Badge className="bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+        {LABEL[status]}
+      </Badge>
+    )
   }
 
   if (status === 'error') {

@@ -1,4 +1,4 @@
 - UI: English only
 - no file > 300 lines
 - no function > 100 lines
-- don't use playwright for every little change.
+- DO NOT use playwright MCP

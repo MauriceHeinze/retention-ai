@@ -27,16 +27,3 @@ export function formatNumber(value: number) {
 export function formatPercent(value: number) {
   return `${value}%`
 }
-
-const lastSyncFormatter = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
-
-export function formatLastSync(value: string | null) {
-  if (!value) return 'Never'
-  return lastSyncFormatter.format(new Date(value))
-}

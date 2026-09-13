@@ -77,7 +77,6 @@ const CONNECTED_ACCOUNTS: Record<IntegrationId, string> = {
 }
 
 export function connectIntegration(id: IntegrationId) {
-  const lastSync = new Date().toISOString()
   const account = CONNECTED_ACCOUNTS[id]
 
   if (id === 'stripe') {
@@ -85,7 +84,6 @@ export function connectIntegration(id: IntegrationId) {
       ...draft.stripe,
       status: 'connected',
       account,
-      lastSync,
     })
     return
   }
@@ -95,7 +93,6 @@ export function connectIntegration(id: IntegrationId) {
       ...draft.github,
       status: 'connected',
       account,
-      lastSync,
       organization: draft.github.organization || 'acme-gmbh',
       repositories:
         draft.github.repositories.length > 0
@@ -110,7 +107,6 @@ export function connectIntegration(id: IntegrationId) {
       ...draft.mailchimp,
       status: 'connected',
       account,
-      lastSync,
       errorMessage: null,
     })
     return
@@ -120,7 +116,6 @@ export function connectIntegration(id: IntegrationId) {
     ...draft.slack,
     status: 'connected',
     account,
-    lastSync,
   })
 }
 
@@ -130,7 +125,6 @@ export function disconnectIntegration(id: IntegrationId) {
       ...draft.stripe,
       status: 'not_connected',
       account: null,
-      lastSync: null,
     })
     return
   }
@@ -140,7 +134,6 @@ export function disconnectIntegration(id: IntegrationId) {
       ...draft.github,
       status: 'not_connected',
       account: null,
-      lastSync: null,
     })
     return
   }
@@ -150,7 +143,6 @@ export function disconnectIntegration(id: IntegrationId) {
       ...draft.mailchimp,
       status: 'not_connected',
       account: null,
-      lastSync: null,
       errorMessage: null,
     })
     return
@@ -160,7 +152,6 @@ export function disconnectIntegration(id: IntegrationId) {
     ...draft.slack,
     status: 'not_connected',
     account: null,
-    lastSync: null,
   })
 }
 

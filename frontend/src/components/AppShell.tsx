@@ -18,13 +18,13 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { logout } from '@/lib/auth'
-import { isCampaignsPath, isSettingsPath, navigate } from '@/lib/navigate'
+import { isCampaignsPath, isFeaturesPath, isSettingsPath, navigate } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/campaigns', label: 'Campaigns', icon: Mail },
-  { href: '/features', label: 'Features', icon: Layers },
+  { href: '/features', label: 'Feature events', icon: Layers },
   { href: '/settings/integrations', label: 'Settings', icon: Settings },
 ] as const
 
@@ -97,7 +97,9 @@ function AppSidebar({ pathname, email }: { pathname: string; email: string }) {
                       ? isSettingsPath(pathname)
                       : item.href === '/campaigns'
                         ? isCampaignsPath(pathname)
-                        : pathname === item.href || pathname.startsWith(`${item.href}/`)
+                        : item.href === '/features'
+                          ? isFeaturesPath(pathname)
+                          : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
                 return (
                   <SidebarMenuItem key={item.href}>

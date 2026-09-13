@@ -3,14 +3,12 @@ import { IntegrationStatusBadge } from '@/components/settings/IntegrationStatus'
 import { Button } from '@/components/ui/button'
 import type { IntegrationId, IntegrationStatus } from '@/data/settings'
 import { integrationMeta } from '@/data/settings'
-import { formatLastSync } from '@/lib/format'
 import { connectIntegration, disconnectIntegration } from '@/lib/settings-store'
 
 type IntegrationSummaryProps = {
   id: IntegrationId
   status: IntegrationStatus
   account: string | null
-  lastSync: string | null
   errorMessage?: string | null
 }
 
@@ -18,7 +16,6 @@ export function IntegrationSummary({
   id,
   status,
   account,
-  lastSync,
   errorMessage,
 }: IntegrationSummaryProps) {
   const meta = integrationMeta[id]
@@ -39,21 +36,13 @@ export function IntegrationSummary({
             <p className="mt-1 text-sm text-muted-foreground">{meta.description}</p>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-8">
-          {connected ? (
-            <Button variant="outline" onClick={() => disconnectIntegration(id)}>
-              Disconnect
-            </Button>
-          ) : (
-            <Button onClick={() => connectIntegration(id)}>Connect</Button>
-          )}
-          <div className="text-right">
-            <p className="text-xs tracking-[0.08em] text-muted-foreground uppercase">
-              Last sync
-            </p>
-            <p className="mt-1 text-sm">{formatLastSync(lastSync)}</p>
-          </div>
-        </div>
+        {connected ? (
+          <Button variant="outline" onClick={() => disconnectIntegration(id)}>
+            Disconnect
+          </Button>
+        ) : (
+          <Button onClick={() => connectIntegration(id)}>Connect</Button>
+        )}
       </div>
 
       <dl>

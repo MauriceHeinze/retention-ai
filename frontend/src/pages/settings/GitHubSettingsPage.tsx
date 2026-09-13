@@ -38,7 +38,7 @@ export default function GitHubSettingsPage() {
         id="github"
         status={github.status}
         account={github.account}
-        lastSync={github.lastSync}
+
       />
 
       <FieldGroup>

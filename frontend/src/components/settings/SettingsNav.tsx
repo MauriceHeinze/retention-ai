@@ -1,4 +1,5 @@
 import { Link } from '@/components/Link'
+import { IntegrationMark } from '@/components/settings/IntegrationMark'
 import { IntegrationStatusDot } from '@/components/settings/IntegrationStatus'
 import { integrationMeta, type IntegrationId } from '@/data/settings'
 import { useDraftSettings } from '@/lib/settings-store'
@@ -46,7 +47,10 @@ export function SettingsNav({ pathname }: { pathname: string }) {
                       : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                   )}
                 >
-                  <span>{meta.name}</span>
+                  <span className="flex items-center gap-2">
+                    <IntegrationMark id={id} size="sm" />
+                    {meta.name}
+                  </span>
                   <IntegrationStatusDot status={settings[id].status} />
                 </Link>
               </li>

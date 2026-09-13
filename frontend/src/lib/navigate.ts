@@ -58,3 +58,30 @@ export function campaignIdFromPath(pathname: string) {
   }
   return null
 }
+
+export const FEATURE_TABS = ['feature', 'matches', 'draft'] as const
+export type FeatureTab = (typeof FEATURE_TABS)[number]
+
+export function isFeaturesPath(pathname: string) {
+  return pathname === '/features' || pathname.startsWith('/features/')
+}
+
+export function featureHref(id: string, tab: FeatureTab = 'feature') {
+  const encoded = encodeURIComponent(id)
+  return tab === 'feature' ? `/features/${encoded}` : `/features/${encoded}/${tab}`
+}
+
+export function parseFeaturePath(pathname: string) {
+  if (!pathname.startsWith('/features/')) return null
+  const rest = pathname.slice('/features/'.length)
+  if (!rest) return null
+
+  const [rawId, rawTab] = rest.split('/')
+  if (!rawId) return null
+
+  const tab = FEATURE_TABS.includes(rawTab as FeatureTab)
+    ? (rawTab as FeatureTab)
+    : 'feature'
+
+  return { featureId: decodeURIComponent(rawId), tab }
+}

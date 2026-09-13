@@ -15,7 +15,7 @@ export default function StripeSettingsPage() {
         id="stripe"
         status={stripe.status}
         account={stripe.account}
-        lastSync={stripe.lastSync}
+
       />
 
       <FieldGroup>

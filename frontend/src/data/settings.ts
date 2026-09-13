@@ -6,7 +6,6 @@ export type StripeSettings = {
   status: IntegrationStatus
   account: string | null
   dataSource: string
-  lastSync: string | null
 }
 
 export type GitHubSettings = {
@@ -14,7 +13,6 @@ export type GitHubSettings = {
   account: string | null
   organization: string
   repositories: string[]
-  lastSync: string | null
 }
 
 export type MailchimpSettings = {
@@ -22,7 +20,6 @@ export type MailchimpSettings = {
   account: string | null
   audience: string
   template: string
-  lastSync: string | null
   errorMessage: string | null
 }
 
@@ -31,7 +28,6 @@ export type SlackSettings = {
   account: string | null
   channel: string
   owners: string[]
-  lastSync: string | null
 }
 
 export type AppSettings = {
@@ -137,21 +133,18 @@ export const defaultSettings: AppSettings = {
     status: 'connected',
     account: 'Acme GmbH',
     dataSource: 'subscriptions',
-    lastSync: '2026-09-13T08:12:00',
   },
   github: {
     status: 'connected',
     account: 'acme-gmbh',
     organization: 'acme-gmbh',
     repositories: ['retention-ai', 'billing-service'],
-    lastSync: '2026-09-12T18:40:00',
   },
   mailchimp: {
     status: 'error',
     account: 'Acme',
     audience: 'churned',
     template: 'feature-announcement',
-    lastSync: '2026-09-11T09:04:00',
     errorMessage: 'The last audience sync failed. Try again after checking the selected list.',
   },
   slack: {
@@ -159,7 +152,6 @@ export const defaultSettings: AppSettings = {
     account: null,
     channel: '#customer-success',
     owners: ['lena-hoff'],
-    lastSync: null,
   },
   matching: { minMatchStrength: 75 },
   language: { defaultLanguage: 'en', brandVoice: '' },
@@ -201,10 +193,6 @@ export function getIntegrationStatus(
 
 export function getIntegrationAccount(settings: AppSettings, id: IntegrationId) {
   return settings[id].account
-}
-
-export function getIntegrationLastSync(settings: AppSettings, id: IntegrationId) {
-  return settings[id].lastSync
 }
 
 export function countWords(text: string) {

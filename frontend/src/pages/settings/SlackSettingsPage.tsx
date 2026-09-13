@@ -25,7 +25,7 @@ export default function SlackSettingsPage() {
         id="slack"
         status={slack.status}
         account={slack.account}
-        lastSync={slack.lastSync}
+
       />
 
       <FieldGroup>
