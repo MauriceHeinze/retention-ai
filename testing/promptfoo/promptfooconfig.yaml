@@ -1,0 +1,120 @@
+description: Evaluate the real RetentionAI production agent against git diffs and cancellations
+
+# The custom provider reads the rendered test variables. Including both inputs
+# here gives every case a distinct Promptfoo cache key.
+prompts:
+  - |
+    Git diff:
+    {{diff}}
+
+    Customers:
+    {{customers}}
+
+providers:
+  - id: file://production-agent-provider.cjs
+    label: production-agent
+    config:
+      modelId: google/gemini-3.8-flash
+
+tests: file://feature-detection-tests.yaml
+
+evaluateOptions:
+  maxConcurrency: 1
+
+defaultTest:
+  assert:
+    - type: is-json
+      metric: ProductionContract
+      value:
+        type: object
+        required: [decisions, tools, excludedCustomers]
+        additionalProperties: false
+        properties:
+          decisions:
+            type: array
+            minItems: 10
+            maxItems: 15
+            items:
+              type: object
+              required: [customerId, decision, reason, customerEvidence, releaseEvidence, draft]
+              additionalProperties: false
+              properties:
+                customerId: { type: string, minLength: 1 }
+                decision: { type: string, enum: [match, no_match, needs_review] }
+                reason: { type: string, minLength: 1 }
+                customerEvidence:
+                  anyOf:
+                    - { type: string, minLength: 1 }
+                    - { type: 'null' }
+                releaseEvidence: { type: string, minLength: 1 }
+                draft:
+                  anyOf:
+                    - type: object
+                      required: [subject, body]
+                      additionalProperties: false
+                      properties:
+                        subject: { type: string, minLength: 1 }
+                        body: { type: string, minLength: 1 }
+                    - { type: 'null' }
+          tools:
+            type: array
+            allOf:
+              - contains: { const: readRelease }
+              - contains: { const: readCancellationFeedback }
+          excludedCustomers: { type: integer, const: 0 }
+
+    - type: javascript
+      metric: CompleteCoverage
+      value: |
+        const result = JSON.parse(output);
+        const customers = JSON.parse(context.vars.customers);
+        const expectedIds = customers.map(customer => customer.customer_id).sort();
+        const actualIds = result.decisions.map(decision => decision.customerId).sort();
+        const errors = [];
+        if (JSON.stringify(actualIds) !== JSON.stringify(expectedIds)) {
+          errors.push('Every supplied customer must be assessed exactly once');
+        }
+        for (const decision of result.decisions) {
+          if (decision.decision !== 'match') errors.push(`${decision.customerId} was not matched`);
+          if (decision.draft === null) errors.push(`${decision.customerId} has no draft`);
+        }
+        for (const tool of ['readRelease', 'readCancellationFeedback']) {
+          if (!result.tools.includes(tool)) errors.push(`Production agent did not use ${tool}`);
+        }
+        if (result.excludedCustomers !== 0) errors.push('Eligible test customers were excluded');
+        return errors.length === 0 || { pass: false, score: 0, reason: errors.join('; ') };
+
+    - type: llm-rubric
+      metric: FeatureDetection
+      provider: openrouter:google/gemini-3.8-flash
+      value: |
+        Expected newly added features:
+        {{expected_features}}
+
+        Expected customer assignments:
+        {{expected_matches}}
+
+        This is the real production agent output. It does not return a separate
+        feature list. Infer feature recognition from its match decisions, reasons,
+        and exact releaseEvidence quotes.
+
+        Pass only if every expected feature is demonstrably recognized in at least
+        one correctly matched decision for a customer assigned to that feature.
+        The cited release evidence and reason must describe the expected user-facing
+        behavior and important limitations. Every expected feature must be covered.
+
+    - type: llm-rubric
+      metric: CustomerMatching
+      provider: openrouter:google/gemini-3.8-flash
+      value: |
+        Expected newly added features:
+        {{expected_features}}
+
+        Expected customer-to-feature assignments:
+        {{expected_matches}}
+
+        Pass only if every customer has a match decision and the decision's reason
+        and releaseEvidence correspond to that customer's expected semantic feature.
+        Fail for a missing customer, an unrelated feature, an unsupported claim, or
+        evidence that addresses a different cancellation need. Different wording is
+        acceptable; judge semantic equivalence rather than keyword overlap.

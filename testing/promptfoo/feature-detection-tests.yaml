@@ -1,0 +1,494 @@
+- description: "1 feature: passwordless magic-link sign-in"
+  vars:
+    expected_features: >-
+      [{"id":"magic-link-sign-in","name":"Passwordless magic-link sign-in","description":"Users can request a one-time sign-in link by email; links expire after 15 minutes and can only be used once."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval001","cancellation_reason":"I canceled because password-based login was too cumbersome. I wanted a secure sign-in link sent to my email."},{"customer_id":"cus_RAIeval002","cancellation_reason":"Our team needed passwordless email login and the product did not support it."},{"customer_id":"cus_RAIeval003","cancellation_reason":"I kept forgetting my password. A temporary one-time login link would have kept me subscribed."},{"customer_id":"cus_RAIeval004","cancellation_reason":"We require sign-in links that expire quickly instead of permanent passwords."},{"customer_id":"cus_RAIeval005","cancellation_reason":"Logging in on shared devices was painful. I needed a single-use link delivered by email."},{"customer_id":"cus_RAIeval006","cancellation_reason":"I left because there was no magic-link authentication option."},{"customer_id":"cus_RAIeval007","cancellation_reason":"Password resets caused too much friction for our users. We needed email-based passwordless access."},{"customer_id":"cus_RAIeval008","cancellation_reason":"I wanted to request a login link from the sign-in screen and enter the app without a password."},{"customer_id":"cus_RAIeval009","cancellation_reason":"The lack of short-lived email sign-in links was the main reason I canceled."},{"customer_id":"cus_RAIeval010","cancellation_reason":"We only adopt tools with passwordless authentication through one-time emailed links."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval001","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval002","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval003","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval004","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval005","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval006","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval007","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval008","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval009","feature_id":"magic-link-sign-in"},{"customer_id":"cus_RAIeval010","feature_id":"magic-link-sign-in"}]
+    diff: |
+      diff --git a/features/auth/routes.ts b/features/auth/routes.ts
+      index 6d21a19..942e8bd 100644
+      --- a/features/auth/routes.ts
+      +++ b/features/auth/routes.ts
+      @@ -1,8 +1,24 @@
+       import { Router } from "express";
+      -import { verifyPassword } from "./passwords";
+      +import { createMagicLink, consumeMagicLink } from "./magic-links";
+       import { sendEmail } from "../email";
+
+       export const auth = Router();
+      +auth.post("/magic-link", async (req, res) => {
+      +  const token = await createMagicLink({
+      +    email: req.body.email,
+      +    expiresInMinutes: 15,
+      +    singleUse: true,
+      +  });
+      +  await sendEmail(req.body.email, {
+      +    subject: "Your sign-in link",
+      +    url: `${process.env.APP_URL}/auth/verify?token=${token}`,
+      +  });
+      +  res.status(202).json({ accepted: true });
+      +});
+      +
+      +auth.get("/verify", async (req, res) => {
+      +  const session = await consumeMagicLink(String(req.query.token));
+      +  res.cookie("session", session.id, { httpOnly: true, sameSite: "lax" });
+      +  res.redirect("/dashboard");
+      +});
+
+- description: "1 feature: invoice PDF download"
+  vars:
+    expected_features: >-
+      [{"id":"invoice-pdf-download","name":"Invoice PDF download","description":"Customers can download a PDF copy of a paid invoice from its billing-history row."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval011","cancellation_reason":"I canceled because I could not download paid invoices as PDF files for accounting."},{"customer_id":"cus_RAIeval012","cancellation_reason":"Our bookkeeper needs a PDF copy of every settled invoice and there was no download option."},{"customer_id":"cus_RAIeval013","cancellation_reason":"The billing history showed totals but did not let me save the invoice document."},{"customer_id":"cus_RAIeval014","cancellation_reason":"I needed printable PDF invoices from the billing page."},{"customer_id":"cus_RAIeval015","cancellation_reason":"We left because paid invoices could not be downloaded for our monthly records."},{"customer_id":"cus_RAIeval016","cancellation_reason":"I had to contact support whenever finance requested an invoice PDF."},{"customer_id":"cus_RAIeval017","cancellation_reason":"A direct PDF download beside each paid invoice was essential for our workflow."},{"customer_id":"cus_RAIeval018","cancellation_reason":"The missing invoice-document export made the product unsuitable for our accounting process."},{"customer_id":"cus_RAIeval019","cancellation_reason":"I wanted to archive paid invoices locally as PDFs but could not."},{"customer_id":"cus_RAIeval020","cancellation_reason":"Our compliance process requires downloadable PDF copies of paid invoices."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval011","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval012","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval013","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval014","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval015","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval016","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval017","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval018","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval019","feature_id":"invoice-pdf-download"},{"customer_id":"cus_RAIeval020","feature_id":"invoice-pdf-download"}]
+    diff: |
+      diff --git a/features/billing/InvoiceRow.js b/features/billing/InvoiceRow.js
+      index 72b9c4e..a1cf902 100644
+      --- a/features/billing/InvoiceRow.js
+      +++ b/features/billing/InvoiceRow.js
+      @@ -1,9 +1,17 @@
+       export function InvoiceRow({ invoice }: Props) {
+         return (
+           <tr>
+             <td>{invoice.number}</td>
+             <td>{formatMoney(invoice.total)}</td>
+             <td>{invoice.status}</td>
+      +      <td>
+      +        {invoice.status === "paid" && (
+      +          <a
+      +            href={`/api/invoices/${invoice.id}/pdf`}
+      +            download={`invoice-${invoice.number}.pdf`}
+      +          >
+      +            Download PDF
+      +          </a>
+      +        )}
+      +      </td>
+           </tr>
+         );
+       }
+      diff --git a/features/api/invoices.ts b/features/api/invoices.ts
+      index 9ab2100..044bccd 100644
+      --- a/features/api/invoices.ts
+      +++ b/features/api/invoices.ts
+      @@ -12,3 +12,9 @@ router.get("/invoices", listInvoices);
+      +router.get("/invoices/:id/pdf", requireUser, async (req, res) => {
+      +  const invoice = await billing.findOwnedInvoice(req.user.id, req.params.id);
+      +  if (!invoice || invoice.status !== "paid") return res.sendStatus(404);
+      +  res.type("application/pdf");
+      +  res.send(await billing.renderInvoicePdf(invoice));
+      +});
+
+- description: "1 feature: drag-and-drop document upload"
+  vars:
+    expected_features: >-
+      [{"id":"drag-drop-upload","name":"Drag-and-drop document upload","description":"Users can drop up to five PDF or DOCX files onto the document library and see per-file upload progress."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval021","cancellation_reason":"Uploading documents one by one was too slow. I needed to drag several PDF files into the library."},{"customer_id":"cus_RAIeval022","cancellation_reason":"I canceled because there was no drag-and-drop upload for DOCX documents."},{"customer_id":"cus_RAIeval023","cancellation_reason":"We needed to drop a small batch of PDFs and see progress for each file."},{"customer_id":"cus_RAIeval024","cancellation_reason":"The document library lacked a drop zone for adding multiple files."},{"customer_id":"cus_RAIeval025","cancellation_reason":"I could not tell whether large document uploads were still running because there was no per-file progress."},{"customer_id":"cus_RAIeval026","cancellation_reason":"Our workflow depends on dragging up to five Word documents into the browser at once."},{"customer_id":"cus_RAIeval027","cancellation_reason":"Manual file selection made document intake too tedious. Drag-and-drop would have solved it."},{"customer_id":"cus_RAIeval028","cancellation_reason":"I needed batch upload for PDF and DOCX files directly in the document library."},{"customer_id":"cus_RAIeval029","cancellation_reason":"The absence of visible upload progress and a drag target caused us to leave."},{"customer_id":"cus_RAIeval030","cancellation_reason":"We wanted to drop several supported documents onto the page instead of uploading each separately."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval021","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval022","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval023","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval024","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval025","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval026","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval027","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval028","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval029","feature_id":"drag-drop-upload"},{"customer_id":"cus_RAIeval030","feature_id":"drag-drop-upload"}]
+    diff: |
+      diff --git a/features/documents/DocumentLibrary.js b/features/documents/DocumentLibrary.js
+      index 38c3e84..0b65cbb 100644
+      --- a/features/documents/DocumentLibrary.js
+      +++ b/features/documents/DocumentLibrary.js
+      @@ -1,10 +1,28 @@
+      +import { useDropzone } from "react-dropzone";
+       import { DocumentList } from "./DocumentList";
+      +import { useUploads } from "./useUploads";
+
+       export function DocumentLibrary() {
+      +  const { upload, progress } = useUploads();
+      +  const dropzone = useDropzone({
+      +    accept: {
+      +      "application/pdf": [".pdf"],
+      +      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+      +    },
+      +    maxFiles: 5,
+      +    onDropAccepted: upload,
+      +  });
+      +
+         return (
+           <main>
+             <h1>Documents</h1>
+      +      <section {...dropzone.getRootProps()} aria-label="Upload documents">
+      +        <input {...dropzone.getInputProps()} />
+      +        <p>Drop up to 5 PDF or DOCX files here</p>
+      +      </section>
+      +      {progress.map(item => (
+      +        <progress key={item.fileName} value={item.percent} max="100">
+      +          {item.percent}%
+      +        </progress>
+      +      ))}
+             <DocumentList />
+           </main>
+         );
+       }
+
+- description: "2 features: CSV export and saved filters"
+  vars:
+    expected_features: >-
+      [{"id":"csv-export","name":"Filtered CSV export","description":"Users can export the currently filtered orders as a CSV file from the orders page."},{"id":"saved-filters","name":"Saved order filters","description":"Users can name and save the current order filters, then reapply a saved filter later."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval031","cancellation_reason":"I canceled because I could not export the orders currently shown by my filters to CSV."},{"customer_id":"cus_RAIeval032","cancellation_reason":"Finance needed a CSV download containing only the filtered order results."},{"customer_id":"cus_RAIeval033","cancellation_reason":"The orders page had filters but no way to take that filtered data into Excel."},{"customer_id":"cus_RAIeval034","cancellation_reason":"I needed a one-click orders CSV export that respected my active filters."},{"customer_id":"cus_RAIeval035","cancellation_reason":"We left because filtered order lists could not be downloaded as CSV files."},{"customer_id":"cus_RAIeval036","cancellation_reason":"I rebuilt the same order filters every morning. I needed to save and reuse them."},{"customer_id":"cus_RAIeval037","cancellation_reason":"The lack of named saved filters on the orders page was my reason for canceling."},{"customer_id":"cus_RAIeval038","cancellation_reason":"Our team needed reusable order views instead of configuring filters from scratch."},{"customer_id":"cus_RAIeval039","cancellation_reason":"I wanted to name my current filter combination and apply it again later."},{"customer_id":"cus_RAIeval040","cancellation_reason":"Repeatedly entering complex order criteria wasted too much time because filters could not be saved."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval031","feature_id":"csv-export"},{"customer_id":"cus_RAIeval032","feature_id":"csv-export"},{"customer_id":"cus_RAIeval033","feature_id":"csv-export"},{"customer_id":"cus_RAIeval034","feature_id":"csv-export"},{"customer_id":"cus_RAIeval035","feature_id":"csv-export"},{"customer_id":"cus_RAIeval036","feature_id":"saved-filters"},{"customer_id":"cus_RAIeval037","feature_id":"saved-filters"},{"customer_id":"cus_RAIeval038","feature_id":"saved-filters"},{"customer_id":"cus_RAIeval039","feature_id":"saved-filters"},{"customer_id":"cus_RAIeval040","feature_id":"saved-filters"}]
+    diff: |
+      diff --git a/features/orders/OrdersToolbar.js b/features/orders/OrdersToolbar.js
+      index e30fa13..c314889 100644
+      --- a/features/orders/OrdersToolbar.js
+      +++ b/features/orders/OrdersToolbar.js
+      @@ -1,11 +1,31 @@
+      +import { downloadCsv } from "../lib/download";
+      +import { SavedFilterSelect } from "./SavedFilterSelect";
+      +
+       export function OrdersToolbar({ filters, onFiltersChange }: Props) {
+      +  async function exportOrders() {
+      +    const response = await fetch(`/api/orders/export?${new URLSearchParams(filters)}`);
+      +    downloadCsv(await response.blob(), "orders.csv");
+      +  }
+      +
+      +  async function saveCurrentFilter() {
+      +    const name = window.prompt("Name this filter");
+      +    if (!name) return;
+      +    await fetch("/api/order-filters", {
+      +      method: "POST",
+      +      headers: { "content-type": "application/json" },
+      +      body: JSON.stringify({ name, filters }),
+      +    });
+      +  }
+      +
+         return (
+           <div className="toolbar">
+             <OrderFilters value={filters} onChange={onFiltersChange} />
+      +      <SavedFilterSelect onSelect={onFiltersChange} />
+      +      <button onClick={saveCurrentFilter}>Save filter</button>
+      +      <button onClick={exportOrders}>Export CSV</button>
+           </div>
+         );
+       }
+      diff --git a/features/api/orders.ts b/features/api/orders.ts
+      index 92c00ce..332b9e0 100644
+      --- a/features/api/orders.ts
+      +++ b/features/api/orders.ts
+      @@ -18,3 +18,12 @@ router.get("/orders", requireUser, listOrders);
+      +router.get("/orders/export", requireUser, async (req, res) => {
+      +  const rows = await orders.findForUser(req.user.id, parseFilters(req.query));
+      +  res.attachment("orders.csv").send(toCsv(rows));
+      +});
+      +router.post("/order-filters", requireUser, async (req, res) => {
+      +  const saved = await orderFilters.create(req.user.id, req.body.name, req.body.filters);
+      +  res.status(201).json(saved);
+      +});
+
+- description: "2 features: webhook retries and request signing"
+  vars:
+    expected_features: >-
+      [{"id":"webhook-retries","name":"Automatic webhook retries","description":"Failed webhook deliveries are retried with exponential delays up to five attempts."},{"id":"webhook-signatures","name":"Signed webhook deliveries","description":"Webhook requests include an HMAC SHA-256 signature so receivers can verify that payloads are authentic."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval041","cancellation_reason":"We lost events whenever our endpoint was briefly unavailable because failed webhooks were never retried."},{"customer_id":"cus_RAIeval042","cancellation_reason":"I canceled because webhook delivery had no automatic retry after a server error."},{"customer_id":"cus_RAIeval043","cancellation_reason":"Our integration needed several retry attempts with increasing delays."},{"customer_id":"cus_RAIeval044","cancellation_reason":"A momentary outage caused permanent data gaps. Retrying failed webhook calls was essential."},{"customer_id":"cus_RAIeval045","cancellation_reason":"The product gave up after one failed webhook request and that made it unreliable for us."},{"customer_id":"cus_RAIeval046","cancellation_reason":"Security would not approve unsigned webhooks. We needed an HMAC signature on every request."},{"customer_id":"cus_RAIeval047","cancellation_reason":"I could not verify that webhook payloads really came from your service."},{"customer_id":"cus_RAIeval048","cancellation_reason":"Our receiver requires SHA-256 signed webhook deliveries."},{"customer_id":"cus_RAIeval049","cancellation_reason":"The lack of a signing secret and request signature was why we canceled."},{"customer_id":"cus_RAIeval050","cancellation_reason":"We needed cryptographic verification of webhook bodies before processing events."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval041","feature_id":"webhook-retries"},{"customer_id":"cus_RAIeval042","feature_id":"webhook-retries"},{"customer_id":"cus_RAIeval043","feature_id":"webhook-retries"},{"customer_id":"cus_RAIeval044","feature_id":"webhook-retries"},{"customer_id":"cus_RAIeval045","feature_id":"webhook-retries"},{"customer_id":"cus_RAIeval046","feature_id":"webhook-signatures"},{"customer_id":"cus_RAIeval047","feature_id":"webhook-signatures"},{"customer_id":"cus_RAIeval048","feature_id":"webhook-signatures"},{"customer_id":"cus_RAIeval049","feature_id":"webhook-signatures"},{"customer_id":"cus_RAIeval050","feature_id":"webhook-signatures"}]
+    diff: |
+      diff --git a/features/webhooks/deliver.ts b/features/webhooks/deliver.ts
+      index 4960f88..573bd47 100644
+      --- a/features/webhooks/deliver.ts
+      +++ b/features/webhooks/deliver.ts
+      @@ -1,8 +1,26 @@
+      +import { createHmac } from "node:crypto";
+      +import { jobs } from "../jobs";
+      +
+       export async function deliverWebhook(endpoint: Endpoint, event: Event) {
+         const body = JSON.stringify(event);
+      -  return fetch(endpoint.url, { method: "POST", body });
+      +  const signature = createHmac("sha256", endpoint.signingSecret)
+      +    .update(body)
+      +    .digest("hex");
+      +  const response = await fetch(endpoint.url, {
+      +    method: "POST",
+      +    headers: {
+      +      "content-type": "application/json",
+      +      "x-product-signature-256": `sha256=${signature}`,
+      +    },
+      +    body,
+      +  });
+      +  if (!response.ok && event.deliveryAttempt < 5) {
+      +    await jobs.enqueue("deliver-webhook", {
+      +      endpointId: endpoint.id,
+      +      event: { ...event, deliveryAttempt: event.deliveryAttempt + 1 },
+      +    }, { delaySeconds: 2 ** event.deliveryAttempt * 30 });
+      +  }
+      +  return response;
+       }
+
+- description: "2 features: scheduled reports and Slack delivery"
+  vars:
+    expected_features: >-
+      [{"id":"scheduled-reports","name":"Scheduled reports","description":"Users can schedule a saved report to run daily, weekly, or monthly at a selected UTC hour."},{"id":"slack-report-delivery","name":"Slack report delivery","description":"Scheduled report results can be delivered to a selected Slack channel in addition to email."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval051","cancellation_reason":"I canceled because reports could not run automatically every week."},{"customer_id":"cus_RAIeval052","cancellation_reason":"Our managers needed a monthly report generated at a fixed UTC hour."},{"customer_id":"cus_RAIeval053","cancellation_reason":"Manually running the same report every day was too much work."},{"customer_id":"cus_RAIeval054","cancellation_reason":"I wanted to schedule saved reports for daily or weekly delivery."},{"customer_id":"cus_RAIeval055","cancellation_reason":"The lack of recurring report schedules made the reporting workflow unusable for us."},{"customer_id":"cus_RAIeval056","cancellation_reason":"Our team works in Slack and needed scheduled report results posted to a channel."},{"customer_id":"cus_RAIeval057","cancellation_reason":"I canceled because reports could only arrive by email instead of Slack."},{"customer_id":"cus_RAIeval058","cancellation_reason":"We needed to choose a Slack channel as the destination for recurring reports."},{"customer_id":"cus_RAIeval059","cancellation_reason":"Email reports were overlooked. Delivery to our reporting channel was essential."},{"customer_id":"cus_RAIeval060","cancellation_reason":"The product could not send scheduled report results into Slack."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval051","feature_id":"scheduled-reports"},{"customer_id":"cus_RAIeval052","feature_id":"scheduled-reports"},{"customer_id":"cus_RAIeval053","feature_id":"scheduled-reports"},{"customer_id":"cus_RAIeval054","feature_id":"scheduled-reports"},{"customer_id":"cus_RAIeval055","feature_id":"scheduled-reports"},{"customer_id":"cus_RAIeval056","feature_id":"slack-report-delivery"},{"customer_id":"cus_RAIeval057","feature_id":"slack-report-delivery"},{"customer_id":"cus_RAIeval058","feature_id":"slack-report-delivery"},{"customer_id":"cus_RAIeval059","feature_id":"slack-report-delivery"},{"customer_id":"cus_RAIeval060","feature_id":"slack-report-delivery"}]
+    diff: |
+      diff --git a/features/reports/ScheduleDialog.js b/features/reports/ScheduleDialog.js
+      index 01db4f5..1debc64 100644
+      --- a/features/reports/ScheduleDialog.js
+      +++ b/features/reports/ScheduleDialog.js
+      @@ -1,7 +1,30 @@
+       export function ScheduleDialog({ reportId, slackChannels }: Props) {
+      +  const [frequency, setFrequency] = useState("weekly");
+      +  const [hour, setHour] = useState(9);
+      +  const [slackChannelId, setSlackChannelId] = useState("");
+      +  const save = () => api.post(`/reports/${reportId}/schedules`, {
+      +    frequency,
+      +    hourUtc: hour,
+      +    delivery: slackChannelId ? { type: "slack", slackChannelId } : { type: "email" },
+      +  });
+         return (
+           <Dialog title="Schedule report">
+      -      <p>Scheduling is coming soon.</p>
+      +      <select value={frequency} onChange={event => setFrequency(event.target.value)}>
+      +        <option value="daily">Daily</option>
+      +        <option value="weekly">Weekly</option>
+      +        <option value="monthly">Monthly</option>
+      +      </select>
+      +      <input
+      +        aria-label="UTC delivery hour"
+      +        type="number"
+      +        min="0"
+      +        max="23"
+      +        value={hour}
+      +        onChange={event => setHour(Number(event.target.value))}
+      +      />
+      +      <select value={slackChannelId} onChange={event => setSlackChannelId(event.target.value)}>
+      +        <option value="">Deliver by email</option>
+      +        {slackChannels.map(channel => <option value={channel.id}>Slack: #{channel.name}</option>)}
+      +      </select>
+      +      <button onClick={save}>Create schedule</button>
+           </Dialog>
+         );
+       }
+
+- description: "2 features: backup codes and trusted devices"
+  vars:
+    expected_features: >-
+      [{"id":"mfa-backup-codes","name":"MFA backup codes","description":"Users enabling two-factor authentication receive ten one-time backup codes and can regenerate them later."},{"id":"trusted-devices","name":"Trusted devices","description":"Users can trust a device for 30 days after a successful MFA challenge and revoke trusted devices from security settings."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval061","cancellation_reason":"I needed one-time recovery codes in case I lost access to my authenticator."},{"customer_id":"cus_RAIeval062","cancellation_reason":"We could not enable two-factor authentication without a safe backup-code option."},{"customer_id":"cus_RAIeval063","cancellation_reason":"I canceled because MFA users had no recovery codes to store offline."},{"customer_id":"cus_RAIeval064","cancellation_reason":"Our security policy requires multiple single-use backup codes and a way to regenerate them."},{"customer_id":"cus_RAIeval065","cancellation_reason":"The lack of emergency MFA recovery codes created too much lockout risk."},{"customer_id":"cus_RAIeval066","cancellation_reason":"Entering an MFA code on my own laptop every day was too disruptive. I needed to trust it temporarily."},{"customer_id":"cus_RAIeval067","cancellation_reason":"I wanted remembered devices for 30 days after a successful two-factor check."},{"customer_id":"cus_RAIeval068","cancellation_reason":"Our users needed a list of trusted devices with the ability to revoke them."},{"customer_id":"cus_RAIeval069","cancellation_reason":"I canceled because there was no secure way to skip repeated MFA challenges on known devices."},{"customer_id":"cus_RAIeval070","cancellation_reason":"The product lacked manageable trusted-device sessions for two-factor authentication."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval061","feature_id":"mfa-backup-codes"},{"customer_id":"cus_RAIeval062","feature_id":"mfa-backup-codes"},{"customer_id":"cus_RAIeval063","feature_id":"mfa-backup-codes"},{"customer_id":"cus_RAIeval064","feature_id":"mfa-backup-codes"},{"customer_id":"cus_RAIeval065","feature_id":"mfa-backup-codes"},{"customer_id":"cus_RAIeval066","feature_id":"trusted-devices"},{"customer_id":"cus_RAIeval067","feature_id":"trusted-devices"},{"customer_id":"cus_RAIeval068","feature_id":"trusted-devices"},{"customer_id":"cus_RAIeval069","feature_id":"trusted-devices"},{"customer_id":"cus_RAIeval070","feature_id":"trusted-devices"}]
+    diff: |
+      diff --git a/features/security/mfa.ts b/features/security/mfa.ts
+      index c8216ea..b875f00 100644
+      --- a/features/security/mfa.ts
+      +++ b/features/security/mfa.ts
+      @@ -8,7 +8,19 @@ export async function enableMfa(userId: string, code: string) {
+         await verifyTotp(userId, code);
+         await users.update(userId, { mfaEnabled: true });
+      +  return backupCodes.replaceForUser(userId, { count: 10, singleUse: true });
+       }
+      +
+      +export async function regenerateBackupCodes(userId: string) {
+      +  return backupCodes.replaceForUser(userId, { count: 10, singleUse: true });
+      +}
+      +
+      +export async function trustCurrentDevice(userId: string, deviceId: string) {
+      +  return trustedDevices.create({ userId, deviceId, expiresInDays: 30 });
+      +}
+      +
+      +export async function revokeTrustedDevice(userId: string, deviceId: string) {
+      +  return trustedDevices.removeOwnedBy(userId, deviceId);
+      +}
+      diff --git a/features/security/SecuritySettings.js b/features/security/SecuritySettings.js
+      index a739bcc..571a011 100644
+      --- a/features/security/SecuritySettings.js
+      +++ b/features/security/SecuritySettings.js
+      @@ -14,4 +14,12 @@ export function SecuritySettings({ user }: Props) {
+      +  <Button onClick={() => api.post("/mfa/backup-codes/regenerate")}>
+      +    Regenerate backup codes
+      +  </Button>
+      +  <TrustedDeviceList
+      +    devices={user.trustedDevices}
+      +    onRevoke={deviceId => api.delete(`/trusted-devices/${deviceId}`)}
+      +  />
+       }
+
+- description: "3 features: appearance and keyboard preferences"
+  vars:
+    expected_features: >-
+      [{"id":"dark-mode","name":"Dark mode","description":"Users can switch the application theme between light, dark, and their system preference."},{"id":"display-density","name":"Display density setting","description":"Users can choose comfortable or compact spacing for data tables."},{"id":"keyboard-shortcuts","name":"Global keyboard shortcuts","description":"Users can open search with Cmd or Ctrl+K and create a new item with C when they are not typing in a field."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval071","cancellation_reason":"I work at night and canceled because the interface had no dark theme."},{"customer_id":"cus_RAIeval072","cancellation_reason":"The bright UI caused eye strain. I needed a dark appearance option."},{"customer_id":"cus_RAIeval073","cancellation_reason":"I wanted the app theme to follow my operating system automatically."},{"customer_id":"cus_RAIeval074","cancellation_reason":"Our team required light dark and system theme choices."},{"customer_id":"cus_RAIeval075","cancellation_reason":"The tables used too much space and there was no compact density setting."},{"customer_id":"cus_RAIeval076","cancellation_reason":"I needed denser rows to review more records on one screen."},{"customer_id":"cus_RAIeval077","cancellation_reason":"Our operators wanted to switch between comfortable and compact table spacing."},{"customer_id":"cus_RAIeval078","cancellation_reason":"I canceled because opening search always required the mouse. I wanted Cmd+K."},{"customer_id":"cus_RAIeval079","cancellation_reason":"Creating items repeatedly was slow without a global keyboard shortcut."},{"customer_id":"cus_RAIeval080","cancellation_reason":"Our power users needed keyboard commands for search and creating a new item."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval071","feature_id":"dark-mode"},{"customer_id":"cus_RAIeval072","feature_id":"dark-mode"},{"customer_id":"cus_RAIeval073","feature_id":"dark-mode"},{"customer_id":"cus_RAIeval074","feature_id":"dark-mode"},{"customer_id":"cus_RAIeval075","feature_id":"display-density"},{"customer_id":"cus_RAIeval076","feature_id":"display-density"},{"customer_id":"cus_RAIeval077","feature_id":"display-density"},{"customer_id":"cus_RAIeval078","feature_id":"keyboard-shortcuts"},{"customer_id":"cus_RAIeval079","feature_id":"keyboard-shortcuts"},{"customer_id":"cus_RAIeval080","feature_id":"keyboard-shortcuts"}]
+    diff: |
+      diff --git a/features/settings/AppearanceSettings.js b/features/settings/AppearanceSettings.js
+      new file mode 100644
+      index 0000000..83c3a09
+      --- /dev/null
+      +++ b/features/settings/AppearanceSettings.js
+      @@ -0,0 +1,28 @@
+      +export function AppearanceSettings() {
+      +  const { preferences, update } = usePreferences();
+      +  return (
+      +    <SettingsSection title="Appearance">
+      +      <Select
+      +        label="Theme"
+      +        value={preferences.theme}
+      +        options={["system", "light", "dark"]}
+      +        onChange={theme => update({ theme })}
+      +      />
+      +      <Select
+      +        label="Table density"
+      +        value={preferences.density}
+      +        options={["comfortable", "compact"]}
+      +        onChange={density => update({ density })}
+      +      />
+      +    </SettingsSection>
+      +  );
+      +}
+      diff --git a/features/app/useGlobalShortcuts.ts b/features/app/useGlobalShortcuts.ts
+      new file mode 100644
+      index 0000000..7a2b03d
+      --- /dev/null
+      +++ b/features/app/useGlobalShortcuts.ts
+      @@ -0,0 +1,18 @@
+      +export function useGlobalShortcuts() {
+      +  const navigate = useNavigate();
+      +  const search = useSearchDialog();
+      +  useEffect(() => registerShortcut(event => {
+      +    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      +    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      +      event.preventDefault();
+      +      search.open();
+      +    }
+      +    if (!event.metaKey && !event.ctrlKey && event.key.toLowerCase() === "c") {
+      +      navigate("/items/new");
+      +    }
+      +  }), [navigate, search]);
+      +}
+
+- description: "3 features: roles, audit log, and seat limits"
+  vars:
+    expected_features: >-
+      [{"id":"custom-team-roles","name":"Custom team roles","description":"Workspace owners can create roles with selected project, billing, and member-management permissions and assign them to members."},{"id":"audit-log","name":"Workspace audit log","description":"Admins can browse a paginated record of actor, action, target, and time for workspace changes."},{"id":"seat-limits","name":"Enforced workspace seat limits","description":"Invitations are blocked when a workspace reaches its plan seat limit, with an upgrade prompt shown to the owner."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval081","cancellation_reason":"The built-in permissions were too broad. I needed custom roles for project billing and member access."},{"customer_id":"cus_RAIeval082","cancellation_reason":"I canceled because workspace owners could not define and assign their own team roles."},{"customer_id":"cus_RAIeval083","cancellation_reason":"Our organization requires a billing-read-only role separate from member management."},{"customer_id":"cus_RAIeval084","cancellation_reason":"We needed permission sets tailored to different teams instead of one role for everyone."},{"customer_id":"cus_RAIeval085","cancellation_reason":"Compliance required a record of who changed what and when in the workspace."},{"customer_id":"cus_RAIeval086","cancellation_reason":"I canceled because admins could not review historical workspace actions."},{"customer_id":"cus_RAIeval087","cancellation_reason":"We needed a browsable audit trail showing actor action target and timestamp."},{"customer_id":"cus_RAIeval088","cancellation_reason":"I needed invitations to stop automatically when our plan ran out of seats."},{"customer_id":"cus_RAIeval089","cancellation_reason":"Our owners had no warning that a new invite exceeded the workspace seat allowance."},{"customer_id":"cus_RAIeval090","cancellation_reason":"I canceled because plan seat limits were not enforced during member invitations."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval081","feature_id":"custom-team-roles"},{"customer_id":"cus_RAIeval082","feature_id":"custom-team-roles"},{"customer_id":"cus_RAIeval083","feature_id":"custom-team-roles"},{"customer_id":"cus_RAIeval084","feature_id":"custom-team-roles"},{"customer_id":"cus_RAIeval085","feature_id":"audit-log"},{"customer_id":"cus_RAIeval086","feature_id":"audit-log"},{"customer_id":"cus_RAIeval087","feature_id":"audit-log"},{"customer_id":"cus_RAIeval088","feature_id":"seat-limits"},{"customer_id":"cus_RAIeval089","feature_id":"seat-limits"},{"customer_id":"cus_RAIeval090","feature_id":"seat-limits"}]
+    diff: |
+      diff --git a/features/team/RoleEditor.js b/features/team/RoleEditor.js
+      new file mode 100644
+      index 0000000..dab77a2
+      --- /dev/null
+      +++ b/features/team/RoleEditor.js
+      @@ -0,0 +1,19 @@
+      +const permissions = ["projects:write", "billing:read", "members:manage"];
+      +export function RoleEditor({ role, onSave }: Props) {
+      +  const [name, setName] = useState(role?.name ?? "");
+      +  const [selected, setSelected] = useState(role?.permissions ?? []);
+      +  return <form onSubmit={() => onSave({ name, permissions: selected })}>
+      +    <Input label="Role name" value={name} onChange={setName} />
+      +    {permissions.map(permission => (
+      +      <Checkbox
+      +        key={permission}
+      +        label={permission}
+      +        checked={selected.includes(permission)}
+      +        onChange={() => toggle(permission, selected, setSelected)}
+      +      />
+      +    ))}
+      +    <Button type="submit">Save role</Button>
+      +  </form>;
+      +}
+      diff --git a/features/team/invitations.ts b/features/team/invitations.ts
+      index 1eb8c8d..75e2c92 100644
+      --- a/features/team/invitations.ts
+      +++ b/features/team/invitations.ts
+      @@ -4,6 +4,12 @@ export async function inviteMember(workspace: Workspace, email: string) {
+      +  const activeSeats = await members.countActive(workspace.id);
+      +  if (activeSeats >= workspace.plan.seatLimit) {
+      +    throw new UserFacingError("SEAT_LIMIT_REACHED", {
+      +      action: "Ask a workspace owner to upgrade the plan.",
+      +    });
+      +  }
+         return invitations.create(workspace.id, email);
+       }
+      diff --git a/features/audit/AuditLogPage.js b/features/audit/AuditLogPage.js
+      new file mode 100644
+      index 0000000..360aab1
+      --- /dev/null
+      +++ b/features/audit/AuditLogPage.js
+      @@ -0,0 +1,15 @@
+      +export function AuditLogPage() {
+      +  const { entries, nextPage, hasNextPage } = useAuditEntries({ pageSize: 50 });
+      +  return <AdminOnly>
+      +    <Table>
+      +      {entries.map(entry => <Row key={entry.id}>
+      +        <Cell>{entry.actorName}</Cell>
+      +        <Cell>{entry.action}</Cell>
+      +        <Cell>{entry.target}</Cell>
+      +        <Cell>{formatDateTime(entry.createdAt)}</Cell>
+      +      </Row>)}
+      +    </Table>
+      +    {hasNextPage && <Button onClick={nextPage}>Load more</Button>}
+      +  </AdminOnly>;
+      +}
+
+- description: "3 features: localization, timezone, and RTL layout"
+  vars:
+    expected_features: >-
+      [{"id":"ui-localization","name":"English, German, and French interface languages","description":"Users can choose English, German, or French for the application interface and the preference is persisted."},{"id":"user-timezone","name":"User-selectable timezone","description":"Users can select a timezone and dates throughout the application are formatted in that timezone."},{"id":"rtl-layout","name":"Right-to-left layout support","description":"The application automatically switches document direction for right-to-left locales."}]
+    customers: >-
+      [{"customer_id":"cus_RAIeval091","cancellation_reason":"Our German-speaking staff could not use an interface that was available only in English."},{"customer_id":"cus_RAIeval092","cancellation_reason":"I canceled because there was no French language option for the application UI."},{"customer_id":"cus_RAIeval093","cancellation_reason":"We needed each user to choose and persist their preferred interface language."},{"customer_id":"cus_RAIeval094","cancellation_reason":"English German and French UI options were required for our international team."},{"customer_id":"cus_RAIeval095","cancellation_reason":"Report timestamps appeared in the wrong timezone and users could not change it."},{"customer_id":"cus_RAIeval096","cancellation_reason":"I needed dates throughout the app formatted in my selected timezone."},{"customer_id":"cus_RAIeval097","cancellation_reason":"Our distributed team canceled because everyone saw times without a personal timezone setting."},{"customer_id":"cus_RAIeval098","cancellation_reason":"Our Arabic users needed the interface to switch to a right-to-left layout."},{"customer_id":"cus_RAIeval099","cancellation_reason":"I canceled because right-to-left locales still rendered the page left to right."},{"customer_id":"cus_RAIeval100","cancellation_reason":"Automatic RTL document direction was required for our localized deployment."}]
+    expected_matches: >-
+      [{"customer_id":"cus_RAIeval091","feature_id":"ui-localization"},{"customer_id":"cus_RAIeval092","feature_id":"ui-localization"},{"customer_id":"cus_RAIeval093","feature_id":"ui-localization"},{"customer_id":"cus_RAIeval094","feature_id":"ui-localization"},{"customer_id":"cus_RAIeval095","feature_id":"user-timezone"},{"customer_id":"cus_RAIeval096","feature_id":"user-timezone"},{"customer_id":"cus_RAIeval097","feature_id":"user-timezone"},{"customer_id":"cus_RAIeval098","feature_id":"rtl-layout"},{"customer_id":"cus_RAIeval099","feature_id":"rtl-layout"},{"customer_id":"cus_RAIeval100","feature_id":"rtl-layout"}]
+    diff: |
+      diff --git a/features/settings/LanguageSettings.js b/features/settings/LanguageSettings.js
+      index 5abf102..2c1af45 100644
+      --- a/features/settings/LanguageSettings.js
+      +++ b/features/settings/LanguageSettings.js
+      @@ -1,8 +1,23 @@
+      +const languages = [
+      +  { value: "en", label: "English" },
+      +  { value: "de", label: "Deutsch" },
+      +  { value: "fr", label: "Français" },
+      +];
+       export function LanguageSettings() {
+      +  const preferences = usePreferences();
+         return <SettingsSection title="Language and region">
+      -    <p>English</p>
+      +    <Select
+      +      label="Interface language"
+      +      options={languages}
+      +      value={preferences.locale}
+      +      onChange={locale => preferences.save({ locale })}
+      +    />
+      +    <TimezoneCombobox
+      +      value={preferences.timezone}
+      +      onChange={timezone => preferences.save({ timezone })}
+      +    />
+         </SettingsSection>;
+       }
+      diff --git a/features/i18n/provider.js b/features/i18n/provider.js
+      index e18afe3..d91d24d 100644
+      --- a/features/i18n/provider.js
+      +++ b/features/i18n/provider.js
+      @@ -4,5 +4,13 @@ export function I18nProvider({ children }: Props) {
+      +  const { locale, timezone } = usePreferences();
+      +  useLayoutEffect(() => {
+      +    document.documentElement.lang = locale;
+      +    document.documentElement.dir = isRtlLocale(locale) ? "rtl" : "ltr";
+      +  }, [locale]);
+      +  const formatDate = (date: Date) => new Intl.DateTimeFormat(locale, {
+      +    dateStyle: "medium",
+      +    timeStyle: "short",
+      +    timeZone: timezone,
+      +  }).format(date);
+         return <I18nContext.Provider
+      -    value={{ locale: "en" }}
+      +    value={{ locale, timezone, formatDate }}
+         >{children}</I18nContext.Provider>;
+       }
