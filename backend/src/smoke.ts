@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import Stripe from "stripe";
 import { runAgent } from "./agent.js";
+import { customers, release } from "./fixtures.js";
+import { createSandboxStripe, readDemoCustomers, reportStripeError, SetupError } from "./stripe.js";
 
 const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-const modelId = process.env.OPENROUTER_MODEL?.trim() || "google/gemini-2.5-flash-lite";
+const modelId = process.env.OPENROUTER_MODEL?.trim() || "google/gemini-3.8-flash";
+const usesStripe = process.argv.includes("--stripe");
 
 if (!apiKey) {
   console.error("Set OPENROUTER_API_KEY in your local environment, then run npm run agent:smoke again.");
@@ -10,9 +14,19 @@ if (!apiKey) {
 } else {
   try {
     console.log(`Running RetentionAI with synthetic data using ${modelId}`);
-    const result = await runAgent(apiKey, modelId);
+    const stripeCustomers = usesStripe ? await readDemoCustomers(createSandboxStripe(process.env.STRIPE_SECRET_KEY)) : null;
+    if (stripeCustomers) {
+      const actualScenarios = stripeCustomers.map(customer => customer.demoCase).sort();
+      const expectedScenarios = customers.map(customer => customer.id).sort();
+      if (JSON.stringify(actualScenarios) !== JSON.stringify(expectedScenarios)) {
+        throw new SetupError("Expected five demo cancellation scenarios. Run npm run stripe:seed, or check whether the sandbox fixtures were changed.");
+      }
+      console.log(`Read ${stripeCustomers.length} demo cancellation records from Stripe. Release data is still synthetic.`);
+    }
+    const result = await runAgent(apiKey, modelId, release, stripeCustomers ?? customers);
     console.log(JSON.stringify(result, null, 2));
-    const decisions = Object.fromEntries(result.assessment.decisions.map(item => [item.customerId, item.decision]));
+    const scenarioById = new Map(stripeCustomers?.map(customer => [customer.id, customer.demoCase]));
+    const decisions = Object.fromEntries(result.assessment.decisions.map(item => [scenarioById.get(item.customerId) ?? item.customerId, item.decision]));
     assert.deepEqual(decisions, {
       "customer-manual-csv": "match",
       "customer-scheduled-csv": "no_match",
@@ -21,14 +35,19 @@ if (!apiKey) {
     });
     console.log("PASS: expected matches, source evidence, tool use, and opt-out filtering. No email was sent.");
   } catch (error) {
-    // avoid printing provider errors that could include credentials or request data
-    const knownNames = ["AI_NoObjectGeneratedError", "AI_NoOutputGeneratedError", "AI_APICallError", "AI_RetryError", "AI_TypeValidationError", "TimeoutError", "AssertionError", "TypeError", "Error"];
-    console.error("Failure category:", error instanceof Error && knownNames.includes(error.name) ? error.name : "unclassified");
-    const statusCode = typeof error === "object" && error !== null && "statusCode" in error
-      && typeof error.statusCode === "number" ? error.statusCode : null;
-    console.error(statusCode
-      ? `Agent test failed (HTTP ${statusCode}). Check API access, model availability, and account credit.`
-      : "Agent test failed. Check connectivity and model output; local checks are available with npm test.");
-    process.exitCode = 1;
+    if (usesStripe && (error instanceof SetupError || error instanceof Stripe.errors.StripeError)) {
+      reportStripeError(error);
+      process.exitCode = 1;
+    } else {
+      // avoid printing provider errors that could include credentials or request data
+      const knownNames = ["AI_NoObjectGeneratedError", "AI_NoOutputGeneratedError", "AI_APICallError", "AI_RetryError", "AI_TypeValidationError", "TimeoutError", "AssertionError", "TypeError", "Error"];
+      console.error("Failure category:", error instanceof Error && knownNames.includes(error.name) ? error.name : "unclassified");
+      const statusCode = typeof error === "object" && error !== null && "statusCode" in error
+        && typeof error.statusCode === "number" ? error.statusCode : null;
+      console.error(statusCode
+        ? `Agent test failed (HTTP ${statusCode}). Check API access, model availability, and account credit.`
+        : "Agent test failed. Check connectivity and model output; local checks are available with npm test.");
+      process.exitCode = 1;
+    }
   }
 }

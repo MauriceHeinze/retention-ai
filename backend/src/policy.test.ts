@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { customers, release, type Customer } from "./fixtures.js";
+import { customers, release } from "./fixtures.js";
+import type { Customer } from "./types.js";
 import { canContact, validateAssessment, type Assessment } from "./policy.js";
 
 const customer: Customer = customers[0]!;

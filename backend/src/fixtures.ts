@@ -1,16 +1,10 @@
-export const release = {
+import type { Customer, Release } from "./types.js";
+
+export const release: Release = {
   id: "release-csv-export",
   environment: "production",
   status: "success",
   evidence: "Manual CSV export is now available on all plans. Users can download a report from the dashboard. Scheduled exports and automatic email delivery are not included.",
-};
-
-export type Customer = {
-  id: string;
-  feedback: string | null;
-  status: "canceled" | "active";
-  marketingConsent: boolean;
-  contactedReleaseIds: string[];
 };
 
 export const customers: Customer[] = [

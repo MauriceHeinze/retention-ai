@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Customer } from "./fixtures.js";
+import type { Customer } from "./types.js";
 
 export const assessmentSchema = z.object({
   decisions: z.array(z.object({
