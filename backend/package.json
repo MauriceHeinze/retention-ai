@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit false --outDir dist",
-    "start:production": "node dist/server.js",
+    "start:production": "node dist/start.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/*.test.ts",
     "agent:smoke": "node --env-file=.env.local --import tsx src/smoke.ts",
