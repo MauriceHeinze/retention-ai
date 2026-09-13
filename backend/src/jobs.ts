@@ -3,15 +3,17 @@ import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { deploymentJobSchema, type DeploymentJob } from "./github.js";
+import { completedDeploymentSchema } from "./demo.js";
 
 const recordSchema = z.object({
   job: deploymentJobSchema,
   status: z.enum(["queued", "running", "completed", "failed"]),
+  result: completedDeploymentSchema.optional(),
 });
 type JobRecord = z.infer<typeof recordSchema>;
 export const jobId = (job: DeploymentJob) => createHash("sha256").update(`${job.repository}:${job.sha}`).digest("hex");
 
-export async function createJobQueue(directory: string, processJob: (job: DeploymentJob) => Promise<void>) {
+export async function createJobQueue(directory: string, processJob: (job: DeploymentJob) => Promise<void | z.infer<typeof completedDeploymentSchema>>) {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const records = new Map<string, JobRecord>();
   const filenames = (await readdir(directory)).filter(name => name.endsWith(".json"));
@@ -23,7 +25,7 @@ export async function createJobQueue(directory: string, processJob: (job: Deploy
     records.set(jobId(record.job), record);
   }
   async function save(id: string, record: JobRecord) {
-    // persist only repository/deployment identifiers and status, never customer data or drafts
+    // persist validated demo results, never customer email addresses or provider credentials
     const temporary = join(directory, `${id}.tmp`);
     await writeFile(temporary, JSON.stringify(record), { mode: 0o600, flush: true });
     await rename(temporary, join(directory, `${id}.json`));
@@ -41,8 +43,8 @@ export async function createJobQueue(directory: string, processJob: (job: Deploy
         const [id, record] = next;
         await save(id, { ...record, status: "running" });
         try {
-          await processJob(record.job);
-          await save(id, { ...record, status: "completed" });
+          const result = await processJob(record.job);
+          await save(id, { ...record, status: "completed", ...(result ? { result: completedDeploymentSchema.parse(result) } : {}) });
           console.log(JSON.stringify({ event: "deployment_completed", jobId: id }));
         } catch {
           await save(id, { ...record, status: "failed" });
@@ -77,5 +79,6 @@ export async function createJobQueue(directory: string, processJob: (job: Deploy
     },
     async idle() { await accepting; while (worker) await worker; },
     getStatus(id: string) { return records.get(id)?.status; },
+    completedRuns() { return [...records.values()].flatMap(record => record.status === "completed" && record.result ? [record.result] : []); },
   };
 }

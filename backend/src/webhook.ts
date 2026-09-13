@@ -18,6 +18,7 @@ export function createWebhookServer(options: {
   enqueue?: (job: DeploymentJob) => Promise<{ id: string; duplicate: boolean }>;
   demo?: DemoRunner;
   sendDemoEmail?: DemoEmailer;
+  deploymentStatus?: (id: string) => string | undefined;
   allowedOrigins?: string[];
   requestsPerMinute?: number;
 }) {
@@ -66,6 +67,9 @@ export function createWebhookServer(options: {
         response.writeHead(204); response.end(); return;
       }
       if (!options.demo) { respond(response, 503, { error: "The demo is not configured yet" }); request.resume(); return; }
+      if (request.url === "/api/demo/deployments" && request.method === "GET") {
+        respond(response, 200, { runs: options.demo.deployments() }); return;
+      }
       if (request.url === "/api/demo/runs") {
         if (request.method !== "POST") { response.setHeader("Allow", "POST"); respond(response, 405, { error: "Use POST" }); request.resume(); return; }
         const body = await readDemoJson(request);
@@ -88,6 +92,14 @@ export function createWebhookServer(options: {
       const id = request.url.slice("/api/demo/runs/".length);
       if (request.url.startsWith("/api/demo/runs/") && request.method === "GET") {
         const run = options.demo.get(id);
+        const deploymentStatus = options.deploymentStatus?.(id);
+        if (!run && deploymentStatus) {
+          respond(response, 200, {
+            id, status: ["queued", "running"].includes(deploymentStatus) ? "running" : "failed",
+            ...(deploymentStatus === "failed" ? { error: "Deployment analysis failed. Redeliver the GitHub webhook to retry." }
+              : deploymentStatus === "completed" ? { error: "This deployment produced no reviewable feature change." } : {}),
+          }); return;
+        }
         respond(response, run ? 200 : 404, run ?? { error: "Demo run not found. Start a new demo." }); return;
       }
       respond(response, 404, { error: "Demo route not found" }); request.resume(); return;
@@ -118,7 +130,7 @@ export function createWebhookServer(options: {
     const job = getDeploymentJob(payload, options.repository);
     if (!job) { respond(response, 202, { status: "ignored", reason: "not_successful_production" }); return; }
     const accepted = await options.enqueue(job);
-    respond(response, 202, { status: accepted.duplicate ? "duplicate" : "queued", jobId: accepted.id, simulated: true });
+    respond(response, 202, { status: accepted.duplicate ? "duplicate" : "queued", jobId: accepted.id, runId: accepted.id, simulated: true });
   }
   return createServer({ requestTimeout: 10_000, headersTimeout: 10_000, maxHeaderSize: 16_384 }, (request, response) => {
     void handle(request, response).catch(error => {

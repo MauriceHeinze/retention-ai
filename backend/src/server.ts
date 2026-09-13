@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { runAgent } from "./agent.js";
 import { readGitHubRelease, GitHubError } from "./github.js";
-import { createJobQueue } from "./jobs.js";
+import { createJobQueue, jobId } from "./jobs.js";
 import { createSandboxStripe, readDemoCustomers } from "./stripe.js";
 import { createWebhookServer } from "./webhook.js";
 import { canContact } from "./policy.js";
@@ -41,9 +41,9 @@ if (!config.success) {
     const sendDemoEmail = demo && settings.RESEND_API_KEY && settings.DEMO_RECIPIENT_EMAIL
       ? createDemoEmailer(demo, createResendSender(settings.RESEND_API_KEY, settings.DEMO_RECIPIENT_EMAIL))
       : undefined;
-    let integration = {};
+    let integration: Partial<Parameters<typeof createWebhookServer>[0]> = {};
     if (settings.GITHUB_WEBHOOK_SECRET) {
-      if (!apiKey || !settings.STRIPE_SECRET_KEY) throw new Error("GitHub integration requires provider keys");
+      if (!apiKey || !demo || !settings.STRIPE_SECRET_KEY) throw new Error("GitHub integration requires provider keys");
       const stripe = createSandboxStripe(settings.STRIPE_SECRET_KEY);
       const queue = await createJobQueue(resolve(settings.JOBS_DIRECTORY), async job => {
       try {
@@ -55,19 +55,21 @@ if (!config.success) {
           return;
         }
         const result = await runAgent(apiKey, settings.OPENROUTER_MODEL, release, customers);
-        // sandbox-only output for local review; no email addresses or credentials are logged
-        console.log(JSON.stringify({ event: "assessment_ready", simulated: true, releaseId: release.id, ...result }));
+        const run = demo.publishDeployment(jobId(job), release, customers, result);
+        console.log(JSON.stringify({ event: "assessment_ready", simulated: true, releaseId: release.id, runId: run.id }));
+        return run;
       } catch (error) {
         console.error(JSON.stringify({ event: "assessment_failed", code: error instanceof GitHubError ? error.code : "provider_or_validation_error" }));
         throw error;
       }
       });
-      integration = { secret: settings.GITHUB_WEBHOOK_SECRET, repository: settings.GITHUB_REPOSITORY, enqueue: queue.enqueue };
+      for (const run of queue.completedRuns()) demo.restoreDeployment(run);
+      integration = { secret: settings.GITHUB_WEBHOOK_SECRET, repository: settings.GITHUB_REPOSITORY, enqueue: queue.enqueue, deploymentStatus: queue.getStatus };
     }
     const server = createWebhookServer({ ...integration, ...(demo ? { demo } : {}), ...(sendDemoEmail ? { sendDemoEmail } : {}), allowedOrigins });
     server.on("error", () => { console.error("Unable to start the webhook server. Check the host and port."); process.exitCode = 1; });
     server.listen(settings.PORT, settings.HOST, () => {
-      console.log(JSON.stringify({ event: "server_ready", port: settings.PORT, demoConfigured: Boolean(demo), emailConfigured: Boolean(sendDemoEmail), githubConfigured: Boolean(settings.GITHUB_WEBHOOK_SECRET) }));
+      console.log(JSON.stringify({ event: "server_ready", port: settings.PORT, userId: process.getuid?.(), demoConfigured: Boolean(demo), emailConfigured: Boolean(sendDemoEmail), githubConfigured: Boolean(settings.GITHUB_WEBHOOK_SECRET) }));
     });
   } catch {
     console.error("Server setup failed. Check provider settings, allowed origins, and job-storage permissions.");
