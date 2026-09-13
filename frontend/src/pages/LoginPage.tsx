@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/card'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { login } from '@/lib/auth'
+import { navigate } from '@/lib/navigate'
 
 type FieldErrors = {
   email?: string
@@ -35,13 +37,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
-  const [submitted, setSubmitted] = useState(false)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors = validate(email, password)
     setErrors(nextErrors)
-    setSubmitted(Object.keys(nextErrors).length === 0)
+
+    if (Object.keys(nextErrors).length > 0) return
+
+    login(email.trim())
+    navigate('/')
   }
 
   return (
@@ -59,56 +64,44 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {submitted ? (
-              <p role="status" className="text-sm">
-                Angemeldet als <span className="font-medium">{email}</span>.
-              </p>
-            ) : (
-              <form onSubmit={handleSubmit} noValidate>
-                <FieldGroup className="gap-5">
-                  <Field data-invalid={errors.email ? true : undefined}>
-                    <FieldLabel htmlFor="email">E-Mail</FieldLabel>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="du@firma.de"
-                      value={email}
-                      aria-invalid={Boolean(errors.email)}
-                      onChange={(event) => setEmail(event.target.value)}
-                    />
-                    <FieldError>{errors.email}</FieldError>
-                  </Field>
+            <form onSubmit={handleSubmit} noValidate>
+              <FieldGroup className="gap-5">
+                <Field data-invalid={errors.email ? true : undefined}>
+                  <FieldLabel htmlFor="email">E-Mail</FieldLabel>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="du@firma.de"
+                    value={email}
+                    aria-invalid={Boolean(errors.email)}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                  <FieldError>{errors.email}</FieldError>
+                </Field>
 
-                  <Field data-invalid={errors.password ? true : undefined}>
-                    <FieldLabel htmlFor="password">Passwort</FieldLabel>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={password}
-                      aria-invalid={Boolean(errors.password)}
-                      onChange={(event) => setPassword(event.target.value)}
-                    />
-                    <FieldError>{errors.password}</FieldError>
-                  </Field>
+                <Field data-invalid={errors.password ? true : undefined}>
+                  <FieldLabel htmlFor="password">Passwort</FieldLabel>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    aria-invalid={Boolean(errors.password)}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                  <FieldError>{errors.password}</FieldError>
+                </Field>
 
-                  <Button type="submit" className="w-full" size="lg">
-                    Anmelden
-                  </Button>
-                </FieldGroup>
-              </form>
-            )}
+                <Button type="submit" className="w-full" size="lg">
+                  Anmelden
+                </Button>
+              </FieldGroup>
+            </form>
           </CardContent>
         </Card>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          <a href="/" className="text-foreground underline-offset-4 hover:underline">
-            Zurück zur Startseite
-          </a>
-        </p>
       </div>
     </main>
   )
