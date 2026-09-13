@@ -3,10 +3,13 @@ import Stripe from "stripe";
 import { runAgent } from "./agent.js";
 import { customers, release } from "./fixtures.js";
 import { createSandboxStripe, readDemoCustomers, reportStripeError, SetupError } from "./stripe.js";
+import { getDeploymentJob, releaseFromComparison } from "./github.js";
+import { githubComparisonFixture, githubDeploymentFixture } from "./github-fixtures.js";
 
 const apiKey = process.env.OPENROUTER_API_KEY?.trim();
 const modelId = process.env.OPENROUTER_MODEL?.trim() || "google/gemini-3.8-flash";
-const usesStripe = process.argv.includes("--stripe");
+const usesGitHubFixture = process.argv.includes("--github-fixture");
+const usesStripe = process.argv.includes("--stripe") || usesGitHubFixture;
 
 if (!apiKey) {
   console.error("Set OPENROUTER_API_KEY in your local environment, then run npm run agent:smoke again.");
@@ -23,7 +26,12 @@ if (!apiKey) {
       }
       console.log(`Read ${stripeCustomers.length} demo cancellation records from Stripe. Release data is still synthetic.`);
     }
-    const result = await runAgent(apiKey, modelId, release, stripeCustomers ?? customers);
+    const selectedRelease = usesGitHubFixture
+      ? releaseFromComparison(getDeploymentJob(githubDeploymentFixture, githubDeploymentFixture.repository.full_name)!, githubComparisonFixture)
+      : release;
+    if (!selectedRelease) throw new SetupError("The demo comparison must include a feature change.");
+    if (usesGitHubFixture) console.log("GitHub input is a local simulated deployment and code diff. No GitHub event has been delivered yet.");
+    const result = await runAgent(apiKey, modelId, selectedRelease, stripeCustomers ?? customers);
     console.log(JSON.stringify(result, null, 2));
     const scenarioById = new Map(stripeCustomers?.map(customer => [customer.id, customer.demoCase]));
     const decisions = Object.fromEntries(result.assessment.decisions.map(item => [scenarioById.get(item.customerId) ?? item.customerId, item.decision]));

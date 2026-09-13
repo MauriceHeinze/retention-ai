@@ -7,11 +7,15 @@
     "node": ">=22"
   },
   "scripts": {
+    "build": "tsc --noEmit false --outDir dist",
+    "start:production": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/*.test.ts",
     "agent:smoke": "node --env-file=.env.local --import tsx src/smoke.ts",
     "stripe:seed": "node --env-file=.env.local --import tsx src/seed-stripe.ts",
-    "stripe:smoke": "node --env-file=.env.local --import tsx src/smoke.ts --stripe"
+    "stripe:smoke": "node --env-file=.env.local --import tsx src/smoke.ts --stripe",
+    "start": "node --env-file-if-exists=.env.local --import tsx src/server.ts",
+    "github:smoke": "node --env-file=.env.local --import tsx src/smoke.ts --github-fixture"
   },
   "dependencies": {
     "@openrouter/ai-sdk-provider": "^3.0.0",
