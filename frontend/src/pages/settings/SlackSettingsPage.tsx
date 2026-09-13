@@ -9,7 +9,7 @@ import { updateDraftSettings, useDraftSettings } from '@/lib/settings-store'
 export default function SlackSettingsPage() {
   const settings = useDraftSettings()
   const slack = settings.slack
-  const disabled = slack.status === 'not_connected'
+  const disabled = true
 
   function toggleOwner(owner: string, checked: boolean) {
     const owners = checked
@@ -28,7 +28,7 @@ export default function SlackSettingsPage() {
 
       />
 
-      <FieldGroup>
+      <FieldGroup className="pointer-events-none opacity-60">
         <Field>
           <FieldLabel htmlFor="slack-channel">Channel</FieldLabel>
           <FormSelect

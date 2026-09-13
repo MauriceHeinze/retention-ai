@@ -160,27 +160,31 @@ export const defaultSettings: AppSettings = {
 
 export const integrationMeta: Record<
   IntegrationId,
-  { name: string; href: string; description: string }
+  { name: string; href: string; description: string; available: boolean }
 > = {
   stripe: {
     name: 'Stripe',
     href: '/settings/integrations/stripe',
     description: 'Account and billing data used to find former customers.',
+    available: true,
   },
   github: {
     name: 'GitHub',
     href: '/settings/integrations/github',
     description: 'Organization and repositories that feed new feature events.',
+    available: true,
   },
   mailchimp: {
     name: 'Mailchimp',
     href: '/settings/integrations/mailchimp',
     description: 'Audience and template used to send campaign emails.',
+    available: false,
   },
   slack: {
     name: 'Slack',
     href: '/settings/integrations/slack',
     description: 'Channel and people responsible for campaign reviews.',
+    available: false,
   },
 }
 

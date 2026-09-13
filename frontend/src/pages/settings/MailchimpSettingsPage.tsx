@@ -7,7 +7,7 @@ import { updateDraftSettings, useDraftSettings } from '@/lib/settings-store'
 export default function MailchimpSettingsPage() {
   const settings = useDraftSettings()
   const mailchimp = settings.mailchimp
-  const disabled = mailchimp.status === 'not_connected'
+  const disabled = true
 
   return (
     <div className="flex flex-col gap-8">
@@ -18,7 +18,7 @@ export default function MailchimpSettingsPage() {
         errorMessage={mailchimp.errorMessage}
       />
 
-      <FieldGroup>
+      <FieldGroup className="pointer-events-none opacity-60">
         <Field>
           <FieldLabel htmlFor="mailchimp-audience">Audience</FieldLabel>
           <FormSelect

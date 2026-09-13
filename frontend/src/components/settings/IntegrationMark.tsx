@@ -50,10 +50,12 @@ export function IntegrationMark({
   id,
   className,
   size = 'md',
+  muted = false,
 }: {
   id: IntegrationId
   className?: string
   size?: 'sm' | 'md'
+  muted?: boolean
 }) {
   const mark = MARK[id]
   const Logo = mark.Logo
@@ -65,6 +67,7 @@ export function IntegrationMark({
         'flex shrink-0 items-center justify-center',
         size === 'sm' ? 'size-5' : 'size-9',
         mark.className,
+        muted && 'bg-muted text-muted-foreground grayscale ring-1 ring-border',
         className
       )}
     >

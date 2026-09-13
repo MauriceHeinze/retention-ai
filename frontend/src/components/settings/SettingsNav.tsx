@@ -34,25 +34,40 @@ export function SettingsNav({ pathname }: { pathname: string }) {
           {INTEGRATIONS.map((id) => {
             const meta = integrationMeta[id]
             const isActive = pathname === meta.href
+            const itemClass = cn(
+              'flex items-center justify-between gap-3 px-2 py-1.5 text-sm',
+              meta.available
+                ? isActive
+                  ? 'bg-muted font-medium text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+                : 'cursor-not-allowed text-muted-foreground/50'
+            )
 
             return (
               <li key={id}>
-                <Link
-                  href={meta.href}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'flex items-center justify-between gap-3 px-2 py-1.5 text-sm',
-                    isActive
-                      ? 'bg-muted font-medium text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <IntegrationMark id={id} size="sm" />
-                    {meta.name}
+                {meta.available ? (
+                  <Link
+                    href={meta.href}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={itemClass}
+                  >
+                    <span className="flex items-center gap-2">
+                      <IntegrationMark id={id} size="sm" />
+                      {meta.name}
+                    </span>
+                    <IntegrationStatusDot status={settings[id].status} />
+                  </Link>
+                ) : (
+                  <span className={itemClass} aria-disabled="true">
+                    <span className="flex items-center gap-2">
+                      <IntegrationMark id={id} size="sm" muted />
+                      {meta.name}
+                    </span>
+                    <span className="text-[10px] tracking-[0.08em] uppercase">
+                      Soon
+                    </span>
                   </span>
-                  <IntegrationStatusDot status={settings[id].status} />
-                </Link>
+                )}
               </li>
             )
           })}

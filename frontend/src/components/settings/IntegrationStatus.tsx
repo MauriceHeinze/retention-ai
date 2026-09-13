@@ -8,6 +8,14 @@ const LABEL: Record<Status, string> = {
   not_connected: 'Not connected',
 }
 
+export function ComingSoonBadge() {
+  return (
+    <Badge variant="outline" className="text-muted-foreground">
+      Coming soon
+    </Badge>
+  )
+}
+
 export function IntegrationStatusBadge({ status }: { status: Status }) {
   if (status === 'connected') {
     return (

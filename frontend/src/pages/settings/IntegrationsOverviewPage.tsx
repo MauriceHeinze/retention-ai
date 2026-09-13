@@ -1,5 +1,8 @@
 import { IntegrationMark } from '@/components/settings/IntegrationMark'
-import { IntegrationStatusBadge } from '@/components/settings/IntegrationStatus'
+import {
+  ComingSoonBadge,
+  IntegrationStatusBadge,
+} from '@/components/settings/IntegrationStatus'
 import { Link } from '@/components/Link'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -10,6 +13,7 @@ import {
   type IntegrationId,
 } from '@/data/settings'
 import { useDraftSettings } from '@/lib/settings-store'
+import { cn } from '@/lib/utils'
 
 const INTEGRATIONS: IntegrationId[] = ['stripe', 'github', 'mailchimp', 'slack']
 
@@ -35,32 +39,43 @@ export default function IntegrationsOverviewPage() {
           const action = status === 'not_connected' ? 'Connect' : 'Manage'
 
           return (
-            <Card key={id} size="sm">
+            <Card
+              key={id}
+              size="sm"
+              className={cn(!meta.available && 'opacity-60')}
+              aria-disabled={!meta.available || undefined}
+            >
               <CardHeader className="flex flex-row items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <IntegrationMark id={id} />
+                  <IntegrationMark id={id} muted={!meta.available} />
                   <div>
                     <p className="font-heading text-base font-medium">{meta.name}</p>
                     <div className="mt-1">
-                      <IntegrationStatusBadge status={status} />
+                      {meta.available ? (
+                        <IntegrationStatusBadge status={status} />
+                      ) : (
+                        <ComingSoonBadge />
+                      )}
                     </div>
                   </div>
                 </div>
-                <Link
-                  href={meta.href}
-                  className={buttonVariants({
-                    size: 'sm',
-                    variant: action === 'Connect' ? 'default' : 'outline',
-                  })}
-                >
-                  {action}
-                </Link>
+                {meta.available ? (
+                  <Link
+                    href={meta.href}
+                    className={buttonVariants({
+                      size: 'sm',
+                      variant: action === 'Connect' ? 'default' : 'outline',
+                    })}
+                  >
+                    {action}
+                  </Link>
+                ) : null}
               </CardHeader>
               <CardContent>
                 <p className="mt-8 text-xs tracking-[0.08em] text-muted-foreground uppercase">
                   Connected account
                 </p>
-                <p className="mt-1 text-sm">{account ?? '—'}</p>
+                <p className="mt-1 text-sm">{meta.available ? (account ?? '—') : '—'}</p>
               </CardContent>
             </Card>
           )

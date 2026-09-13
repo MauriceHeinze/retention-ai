@@ -1,5 +1,8 @@
 import { IntegrationMark } from '@/components/settings/IntegrationMark'
-import { IntegrationStatusBadge } from '@/components/settings/IntegrationStatus'
+import {
+  ComingSoonBadge,
+  IntegrationStatusBadge,
+} from '@/components/settings/IntegrationStatus'
 import { Button } from '@/components/ui/button'
 import type { IntegrationId, IntegrationStatus } from '@/data/settings'
 import { integrationMeta } from '@/data/settings'
@@ -22,27 +25,33 @@ export function IntegrationSummary({
   const connected = status !== 'not_connected'
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className={meta.available ? 'flex flex-col gap-8' : 'flex flex-col gap-8 opacity-60'}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <IntegrationMark id={id} />
+          <IntegrationMark id={id} muted={!meta.available} />
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-heading text-2xl font-medium tracking-tight">
                 {meta.name}
               </h1>
-              <IntegrationStatusBadge status={status} />
+              {meta.available ? (
+                <IntegrationStatusBadge status={status} />
+              ) : (
+                <ComingSoonBadge />
+              )}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{meta.description}</p>
           </div>
         </div>
-        {connected ? (
-          <Button variant="outline" onClick={() => disconnectIntegration(id)}>
-            Disconnect
-          </Button>
-        ) : (
-          <Button onClick={() => connectIntegration(id)}>Connect</Button>
-        )}
+        {meta.available ? (
+          connected ? (
+            <Button variant="outline" onClick={() => disconnectIntegration(id)}>
+              Disconnect
+            </Button>
+          ) : (
+            <Button onClick={() => connectIntegration(id)}>Connect</Button>
+          )
+        ) : null}
       </div>
 
       <dl>
@@ -50,11 +59,11 @@ export function IntegrationSummary({
           <dt className="text-xs tracking-[0.08em] text-muted-foreground uppercase">
             Connected account
           </dt>
-          <dd className="mt-1 text-sm">{account ?? '—'}</dd>
+          <dd className="mt-1 text-sm">{meta.available ? (account ?? '—') : '—'}</dd>
         </div>
       </dl>
 
-      {status === 'error' && errorMessage ? (
+      {meta.available && status === 'error' && errorMessage ? (
         <p className="text-sm text-destructive">{errorMessage}</p>
       ) : null}
     </div>
